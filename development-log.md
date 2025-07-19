@@ -68,3 +68,52 @@ resources/
 - Chart.jsによるグラフ描画
 - File APIまたはHTTPによるCSV読み込み
 - 静的サイトホスティング対応
+
+## 2025-07-19 Git管理ルール策定
+
+### 概要
+プロジェクトのGit管理における適切なコミット単位とワークフローのルールを策定・ドキュメント化。
+
+### 実施内容
+
+#### 1. 現在の変更確認・コミット作業
+- `development-log.md` の新規追加をコミット
+- プロジェクト追跡用の開発ログとして位置付け
+
+#### 2. Gitコミットルール策定
+**コミット単位の基準**:
+- 機能単位での論理的まとまり
+- 関連するHTML/CSS/JS変更は同一コミット
+- ドキュメント更新は機能と連動または独立コミット
+
+**コミットメッセージ形式**:
+```
+動詞 + 対象 + 簡潔な説明
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+#### 3. ドキュメント更新
+- CLAUDE.mdに「Git コミットルール」セクション追加
+- 開発者向けガイドライン整備
+- 今後の継続開発での一貫性確保
+
+#### 4. SSH接続確認
+- GitHub SSH接続テスト実施（正常動作確認）
+- `bwsunkist` アカウントでの認証成功
+
+### 作成・更新ファイル
+- `development-log.md` (新規作成・初期内容)
+- `CLAUDE.md` (Gitルール追加)
+
+### Git操作履歴
+```
+f34163e Add development log for project setup tracking
+72b4a97 Add Git commit rules and workflow guidelines
+```
+
+### 今後の開発ログ運用
+- 主要な開発活動・決定事項を継続記録
+- コミット単位での作業内容記録
+- 技術的決定の背景・理由の保存

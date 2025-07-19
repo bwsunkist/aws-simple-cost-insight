@@ -52,3 +52,29 @@ npx serve .
 
 ### デプロイ
 静的ファイルのみなので、任意のWebサーバーやGitHub Pagesに配置可能。
+
+## Git コミットルール
+### コミット単位の基準
+- **機能単位**: 1つの機能追加・修正は1コミットにまとめる
+- **ファイル種別**: HTML、CSS、JSなど異なる種類の変更でも関連する機能なら同一コミット
+- **ドキュメント**: 機能に関連するドキュメント更新は機能コミットに含める
+- **設定ファイル**: プロジェクト設定の変更は独立したコミット
+
+### コミットメッセージ形式
+```
+動詞 + 対象 + 簡潔な説明
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### 例
+- `Add CSV parser and data visualization components`
+- `Fix chart rendering issue for empty data`
+- `Update project documentation and development guide`
+- `Refactor data processing for better performance`
+
+### プッシュタイミング
+- 機能が完成してテストが通った段階で速やかにプッシュ
+- 複数の小さな関連コミットは一度にプッシュしても可

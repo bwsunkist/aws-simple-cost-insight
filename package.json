@@ -1,0 +1,20 @@
+{
+  "name": "aws-simple-cost-insight",
+  "version": "1.0.0",
+  "description": "AWS cost visualization tool for multiple accounts",
+  "main": "index.html",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "serve": "python -m http.server 8000",
+    "serve:node": "npx serve ."
+  },
+  "keywords": ["aws", "cost", "visualization", "chart"],
+  "author": "bwsunkist",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}

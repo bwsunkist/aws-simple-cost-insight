@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS コスト可視化ツール</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="header-title">AWS コスト可視化ツール</h1>
+            <p class="header-subtitle">複数アカウントのコスト削減効果測定・優先度検討</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- アカウント登録セクション -->
+            <section class="account-registration-section">
+                <div class="registration-container">
+                    <h2>アカウント登録</h2>
+                    
+                    <!-- 新規アカウント追加 -->
+                    <div class="add-account-form">
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="accountName">アカウント名</label>
+                                <input type="text" id="accountName" placeholder="dev, prod, staging など" class="account-input">
+                            </div>
+                            <div class="input-group">
+                                <label for="csvFileInput">CSVファイル</label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" id="csvFileInput" accept=".csv" class="file-input">
+                                    <label for="csvFileInput" class="file-input-label">
+                                        📁 ファイル選択
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="selectedFile" class="selected-file"></div>
+                        <button id="addAccountBtn" class="add-btn" disabled>アカウントを追加</button>
+                    </div>
+
+                    <!-- 登録済みアカウント一覧 -->
+                    <div class="registered-accounts">
+                        <h3>登録済みアカウント</h3>
+                        <div id="accountsList" class="accounts-list">
+                            <p class="no-accounts">アカウントが登録されていません</p>
+                        </div>
+                        <div class="accounts-actions">
+                            <button id="clearAllBtn" class="clear-btn" disabled>全て削除</button>
+                            <button id="analyzeBtn" class="analyze-btn" disabled>データ分析開始</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- データ概要パネル -->
+            <section class="data-summary-section" id="dataSummary" style="display: none;">
+                <h2>データ概要</h2>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <h3>読み込み済みアカウント</h3>
+                        <div id="accountCount" class="summary-value">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>総コスト</h3>
+                        <div id="totalCost" class="summary-value">$0.00</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>対象期間</h3>
+                        <div id="datePeriod" class="summary-value">-</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>前月比</h3>
+                        <div id="monthlyChange" class="summary-value">-</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- グラフ表示セクション -->
+            <section class="charts-section" id="chartsSection" style="display: none;">
+                <div class="charts-grid">
+                    <!-- 月次コスト推移グラフ -->
+                    <div class="chart-container">
+                        <h3>月次コスト推移</h3>
+                        <div class="chart-controls">
+                            <label>
+                                <input type="radio" name="trendView" value="accounts" checked>
+                                アカウント別
+                            </label>
+                            <label>
+                                <input type="radio" name="trendView" value="total">
+                                全体合計
+                            </label>
+                        </div>
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+
+                    <!-- サービス別コスト比較 -->
+                    <div class="chart-container">
+                        <h3>サービス別コスト比較</h3>
+                        <div class="chart-controls">
+                            <select id="serviceComparisonPeriod">
+                                <option value="latest">最新月</option>
+                                <option value="total">全期間合計</option>
+                            </select>
+                        </div>
+                        <canvas id="serviceComparisonChart"></canvas>
+                    </div>
+
+                    <!-- サービス別構成比 -->
+                    <div class="chart-container">
+                        <h3>サービス別構成比</h3>
+                        <div class="chart-controls">
+                            <select id="compositionAccount">
+                                <option value="all">全アカウント</option>
+                            </select>
+                        </div>
+                        <canvas id="serviceCompositionChart"></canvas>
+                    </div>
+
+                    <!-- 前月比増減率 -->
+                    <div class="chart-container">
+                        <h3>前月比増減率</h3>
+                        <div id="growthRateTable" class="growth-rate-table">
+                            <!-- 動的に生成される増減率テーブル -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 分析結果セクション -->
+            <section class="analysis-section" id="analysisSection" style="display: none;">
+                <h2>分析結果</h2>
+                <div class="analysis-grid">
+                    <div class="analysis-card">
+                        <h3>未使用サービス</h3>
+                        <div id="unusedServices" class="analysis-content">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                    <div class="analysis-card">
+                        <h3>低使用サービス</h3>
+                        <div id="lowUsageServices" class="analysis-content">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                    <div class="analysis-card">
+                        <h3>高コストサービス</h3>
+                        <div id="highCostServices" class="analysis-content">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 AWS コスト可視化ツール</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/csv-parser.js"></script>
+    <script src="js/chart-config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

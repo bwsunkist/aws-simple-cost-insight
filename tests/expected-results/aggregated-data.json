@@ -1,0 +1,43 @@
+{
+  "multiAccountSummary": {
+    "accounts": ["dev", "prod", "staging"],
+    "totalAccounts": 3,
+    "totalCost": 7.8786,
+    "averageCost": 2.6262,
+    "costByAccount": {
+      "dev": 0.2691,
+      "prod": 7.2837,
+      "staging": 0.3258
+    }
+  },
+  "serviceAggregation": {
+    "S3": 1.3657,
+    "CloudWatch": 0.6479,
+    "Lambda": 1.0957,
+    "EC2": 2.5346,
+    "RDS": 1.7890,
+    "ELB": 0.4567
+  },
+  "monthlyTrends": {
+    "2025-01-01": 1.3085,
+    "2025-02-01": 1.2865,
+    "2025-03-01": 1.3585,
+    "2025-04-01": 1.3657,
+    "2025-05-01": 1.3424,
+    "2025-06-01": 1.3370
+  },
+  "growthRates": {
+    "dev": {
+      "monthOverMonth": -10.4,
+      "totalGrowth": -2.2
+    },
+    "prod": {
+      "monthOverMonth": 0.2,
+      "totalGrowth": 2.6
+    },
+    "staging": {
+      "monthOverMonth": -4.8,
+      "totalGrowth": -4.6
+    }
+  }
+}

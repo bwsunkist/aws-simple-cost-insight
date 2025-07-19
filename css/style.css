@@ -605,3 +605,41 @@ canvas {
 .mt-1 { margin-top: 0.5rem; }
 .mt-2 { margin-top: 1rem; }
 .mt-3 { margin-top: 1.5rem; }
+
+/* 閾値設定 */
+.threshold-setting {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--background-light);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.threshold-setting label {
+    font-weight: 500;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+.threshold-setting input[type="number"] {
+    width: 80px;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    text-align: right;
+}
+
+.threshold-setting input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.threshold-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}

@@ -73,6 +73,7 @@ function cacheElements() {
         analysisSection: document.getElementById('analysisSection'),
         unusedServices: document.getElementById('unusedServices'),
         lowUsageServices: document.getElementById('lowUsageServices'),
+        lowUsageThreshold: document.getElementById('lowUsageThreshold'),
         highCostServices: document.getElementById('highCostServices'),
         
         // Chart controls
@@ -107,6 +108,11 @@ function setupEventListeners() {
     
     if (elements.compositionAccount) {
         elements.compositionAccount.addEventListener('change', handleCompositionAccountChange);
+    }
+    
+    // Threshold setting
+    if (elements.lowUsageThreshold) {
+        elements.lowUsageThreshold.addEventListener('input', handleThresholdChange);
     }
 }
 
@@ -397,16 +403,8 @@ function displayAnalysisResults() {
         ? `<ul class="service-list">${unusedServices.map(service => `<li>${escapeHtml(service)}</li>`).join('')}</ul>`
         : '<p>未使用サービスはありません</p>';
     
-    // Low usage services (< $0.01)
-    const lowUsageServices = Object.entries(aggregatedData.serviceAggregation)
-        .filter(([service, cost]) => cost > 0 && cost < 0.01)
-        .sort(([,a], [,b]) => a - b);
-    
-    elements.lowUsageServices.innerHTML = lowUsageServices.length > 0
-        ? `<ul class="service-list">${lowUsageServices.map(([service, cost]) => 
-            `<li>${escapeHtml(service)} <span class="service-cost">${formatCurrency(cost)}</span></li>`
-          ).join('')}</ul>`
-        : '<p>低使用サービスはありません</p>';
+    // Low usage services (configurable threshold)
+    updateLowUsageServicesDisplay();
     
     // High cost services (top 5)
     const highCostServices = Object.entries(aggregatedData.serviceAggregation)
@@ -489,6 +487,34 @@ function handleCompositionAccountChange(event) {
         const newConfig = createServiceCompositionConfig(aggregatedData, event.target.value);
         updateChart(chartInstances.serviceComposition, newConfig);
     }
+}
+
+/**
+ * Handle threshold change for low usage services
+ */
+function handleThresholdChange(event) {
+    if (aggregatedData) {
+        // Update only the low usage services display
+        updateLowUsageServicesDisplay();
+    }
+}
+
+/**
+ * Update low usage services display based on current threshold
+ */
+function updateLowUsageServicesDisplay() {
+    if (!aggregatedData || !elements.lowUsageServices) return;
+    
+    const threshold = parseFloat(elements.lowUsageThreshold?.value || 0.01);
+    const lowUsageServices = Object.entries(aggregatedData.serviceAggregation)
+        .filter(([service, cost]) => cost > 0 && cost < threshold)
+        .sort(([,a], [,b]) => a - b);
+    
+    elements.lowUsageServices.innerHTML = lowUsageServices.length > 0
+        ? `<ul class="service-list">${lowUsageServices.map(([service, cost]) => 
+            `<li>${escapeHtml(service)} <span class="service-cost">${formatCurrency(cost)}</span></li>`
+          ).join('')}</ul>`
+        : `<p>閾値 $${threshold.toFixed(2)} 以下のサービスはありません</p>`;
 }
 
 /**

@@ -166,7 +166,8 @@ async function handleAddAccount() {
         
         // Read and parse CSV file
         const csvContent = await readCSVFile(file);
-        const accountData = transformCostData(csvContent, accountName);
+        const parsedData = parseCSVString(csvContent);
+        const accountData = transformCostData(parsedData, accountName);
         
         // Add to registered accounts
         registeredAccounts.push({

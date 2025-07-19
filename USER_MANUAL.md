@@ -8,16 +8,36 @@
 ## 🚀 開始方法
 
 ### 1. アプリケーション起動
-```bash
-# 開発サーバー起動
-python -m http.server 8000
+**サーバー不要** - HTMLファイルをブラウザで直接開いてください
 
-# または
-npx serve .
+#### 方法1: ファイルを直接開く
+1. プロジェクトフォルダの `index.html` をダブルクリック
+2. または、ブラウザにファイルをドラッグ&ドロップ
+
+#### 方法2: ブラウザのアドレスバーから
+```
+file:///[プロジェクトの絶対パス]/index.html
 ```
 
-### 2. ブラウザでアクセス
-http://localhost:8000 にアクセス
+**例**:
+- Windows: `file:///C:/work/GitHub/aws-simple-cost-insight/index.html`
+- Mac/Linux: `file:///Users/username/projects/aws-simple-cost-insight/index.html`
+
+### 2. 動作確認
+- ページタイトル「AWS コスト可視化ツール」が表示される
+- アカウント登録フォームが表示される
+- コンソール（F12）に「AWS Cost Insight Tool initialized」ログが出力される
+
+### 3. 【オプション】ローカルサーバー起動
+より本格的な環境で動作確認したい場合：
+```bash
+# Python 3.x の場合
+python -m http.server 8000
+
+# Node.js の場合
+npx serve .
+```
+その後 http://localhost:8000 にアクセス
 
 ---
 

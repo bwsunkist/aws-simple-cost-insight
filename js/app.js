@@ -187,8 +187,8 @@ async function handleAddAccount() {
         
         showMessage(`アカウント「${accountName}」を追加しました`, 'success');
         
-        // Update analysis section if data is available
-        updateAnalysisSection();
+        // Update UI state to enable analysis if multiple accounts
+        updateUIState();
         
     } catch (error) {
         console.error('Error adding account:', error);
@@ -249,6 +249,11 @@ async function handleAnalyzeData() {
         
         // Save aggregated data
         sessionStorage.setItem('awsCostAggregatedData', JSON.stringify(aggregatedData));
+        
+        // Show analysis sections
+        elements.dataSummary.style.display = 'block';
+        elements.chartsSection.style.display = 'block';
+        elements.analysisSection.style.display = 'block';
         
         // Update UI with analysis results
         console.log('Displaying data summary...');

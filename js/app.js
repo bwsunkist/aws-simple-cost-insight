@@ -187,6 +187,9 @@ async function handleAddAccount() {
         
         showMessage(`アカウント「${accountName}」を追加しました`, 'success');
         
+        // Update analysis section if data is available
+        updateAnalysisSection();
+        
     } catch (error) {
         console.error('Error adding account:', error);
         showMessage(`エラー: ${error.message}`, 'error');
@@ -235,16 +238,26 @@ async function handleAnalyzeData() {
         elements.analyzeBtn.disabled = true;
         elements.analyzeBtn.textContent = '分析中...';
         
+        console.log('Starting data analysis...', registeredAccounts);
+        
         // Aggregate data from all accounts
         const accountsData = registeredAccounts.map(acc => acc.data);
+        console.log('Accounts data for aggregation:', accountsData);
+        
         aggregatedData = aggregateMultiAccountData(accountsData);
+        console.log('Aggregated data:', aggregatedData);
         
         // Save aggregated data
         sessionStorage.setItem('awsCostAggregatedData', JSON.stringify(aggregatedData));
         
         // Update UI with analysis results
+        console.log('Displaying data summary...');
         displayDataSummary();
+        
+        console.log('Displaying charts...');
         displayCharts();
+        
+        console.log('Displaying analysis results...');
         displayAnalysisResults();
         
         showMessage('データ分析が完了しました', 'success');

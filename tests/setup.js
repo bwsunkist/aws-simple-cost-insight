@@ -1,13 +1,33 @@
 // Jest setup file
-// Mock Chart.js for testing
+// Enhanced Chart.js mock for testing
 global.Chart = {
   register: jest.fn(),
-  Chart: jest.fn().mockImplementation(() => ({
-    destroy: jest.fn(),
-    update: jest.fn(),
-    resize: jest.fn()
-  }))
+  defaults: {
+    font: { family: 'Arial', size: 12 },
+    color: '#000000'
+  },
+  LineController: jest.fn(),
+  BarController: jest.fn(),
+  PieController: jest.fn(),
+  LineElement: jest.fn(),
+  BarElement: jest.fn(),
+  PointElement: jest.fn(),
+  ArcElement: jest.fn(),
+  CategoryScale: jest.fn(),
+  LinearScale: jest.fn(),
+  Title: jest.fn(),
+  Tooltip: jest.fn(),
+  Legend: jest.fn()
 };
+
+// Mock Chart constructor
+global.Chart = jest.fn().mockImplementation(() => ({
+  destroy: jest.fn(),
+  update: jest.fn(),
+  resize: jest.fn(),
+  data: {},
+  options: {}
+}));
 
 // Mock File API
 global.File = class File {

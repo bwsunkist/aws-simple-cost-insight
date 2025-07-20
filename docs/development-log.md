@@ -91,6 +91,49 @@ const CHART_DEFAULTS = {
 ### Git操作
 - コミット: 全チャートアスペクト比修正とUI最適化完了
 
+### 追加修正: レスポンシブ対応改善
+
+#### 包括的E2Eテスト実行
+**✅ 全機能正常動作確認**:
+1. **CSVガイド機能**: 表示・非表示トグル正常動作
+2. **チャート操作**: ラジオボタン・ドロップダウン切り替え成功
+3. **閾値変更**: リアルタイム更新（$0.01→$50.00）成功
+4. **レスポンシブ動作**: 1200px↔480px完全対応
+5. **チャート表示**: 全画面サイズで適切な表示確認
+
+#### レスポンシブ機能強化
+```css
+@media (max-width: 768px) {
+    #monthlyTrendChart, #serviceComparisonChart, #serviceStackedChart {
+        height: 300px !important;
+    }
+    #serviceCompositionChart {
+        width: 350px !important;
+        height: 350px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #monthlyTrendChart, #serviceComparisonChart, #serviceStackedChart {
+        height: 250px !important;
+    }
+    #serviceCompositionChart {
+        width: 300px !important;
+        height: 300px !important;
+    }
+}
+```
+
+#### 最終品質検証
+- **デスクトップ (1200px)**: 全チャート400px、円グラフ500px
+- **タブレット (768px)**: 全チャート300px、円グラフ350px
+- **モバイル (480px)**: 全チャート250px、円グラフ300px
+- **横スクロール問題**: 完全解決
+- **Chart.js制御**: CSS主導で安定動作
+
+### Git操作
+- コミット: レスポンシブチャート改善と包括的E2Eテスト完了
+
 ---
 
 ## 2025-07-19 Phase 3.1完了: 未使用・低使用サービス特定機能

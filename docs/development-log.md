@@ -1,5 +1,98 @@
 # 開発ログ
 
+## 2025-07-20 円グラフ表示問題修正完了
+
+### 概要
+円グラフ（サービス別構成比）が表示されない問題を特定・修正。CSS aspect-ratio設定が原因でcanvas要素の幅が0pxになっていた問題を解決。
+
+### 問題の詳細
+- **症状**: 円グラフセクションは表示されるが、グラフ自体が見えない
+- **原因**: CSS `aspect-ratio: 1 / 1` が canvas要素に対して幅を0pxに設定
+- **影響**: データは正常に読み込まれているが、Chart.jsが描画領域を取得できない状態
+
+### 修正内容
+
+#### 1. CSS修正
+```css
+/* 修正前 */
+#serviceCompositionChart {
+    max-width: 500px !important;
+    max-height: 500px !important;
+    aspect-ratio: 1 / 1 !important;
+    margin: 0 auto !important;
+}
+
+/* 修正後 */
+#serviceCompositionChart {
+    width: 500px !important;
+    height: 500px !important;
+    max-width: 500px !important;
+    max-height: 500px !important;
+    margin: 0 auto !important;
+}
+```
+
+#### 2. 修正の技術的理由
+- **明示的サイズ指定**: width/heightで具体的なサイズ設定
+- **aspect-ratio削除**: Canvas要素では不適切だった自動アスペクト比を削除
+- **真円保証**: 500px × 500px で完全な円グラフを実現
+
+### 検証結果
+**✅ 全機能正常動作確認**:
+- 円グラフ表示: 完全な円形で500pxサイズ
+- データ表示: 全サービスの構成比が正確に表示
+- 凡例表示: 右側に各サービス名と割合を表示
+- アカウント選択: ドロップダウンでアカウント切替も正常
+
+### 表示内容確認
+- **S3**: 29.9% (最大シェア・赤色)
+- **EC2**: 23.0% (青色)
+- **Lambda**: 19.5% (黄色)
+- **CloudWatch**: 14.5% (ティール)
+- **RDS**: 13.1% (紫色)
+
+### 作成・更新ファイル
+- `css/style.css`: 円グラフCSS修正（aspect-ratio削除、明示的サイズ指定）
+
+### 追加修正: 全チャートアスペクト比最適化
+
+#### 問題発見
+ユーザーフィードバックにより、円グラフ以外のチャートも横長になっていることが判明：
+- 月次コスト推移、サービス別コスト比較、積み上げグラフが不適切なアスペクト比
+
+#### 全体的なアスペクト比修正
+```javascript
+// Chart.js設定変更
+const CHART_DEFAULTS = {
+    responsive: true,
+    maintainAspectRatio: true,    // false → true
+    aspectRatio: 2,               // 新規追加
+    // ...
+}
+```
+
+```css
+/* CSS高さ調整 */
+#monthlyTrendChart,
+#serviceComparisonChart,
+#serviceStackedChart {
+    height: 400px !important;    /* 300px → 400px */
+    max-width: 100%;
+}
+```
+
+#### 最終検証結果
+**✅ 全チャート最適化完了**:
+- 月次コスト推移: 適切なアスペクト比（2:1）
+- サービス別コスト比較: バランスの良い棒グラフ
+- サービス別構成比: 500px完全円グラフ
+- 月次積み上げグラフ: 見やすいアスペクト比
+
+### Git操作
+- コミット: 全チャートアスペクト比修正とUI最適化完了
+
+---
+
 ## 2025-07-19 Phase 3.1完了: 未使用・低使用サービス特定機能
 
 ### 概要

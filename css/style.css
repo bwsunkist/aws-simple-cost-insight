@@ -574,9 +574,10 @@ canvas {
 
 /* 円グラフ専用の真円保持 */
 #serviceCompositionChart {
-    max-width: 400px !important;
-    max-height: 400px !important;
-    aspect-ratio: 1 / 1 !important;
+    width: 500px !important;
+    height: 500px !important;
+    max-width: 500px !important;
+    max-height: 500px !important;
     margin: 0 auto !important;
 }
 
@@ -584,7 +585,7 @@ canvas {
 #monthlyTrendChart,
 #serviceComparisonChart,
 #serviceStackedChart {
-    height: 300px !important;
+    height: 400px !important;
     max-width: 100%;
 }
 
@@ -748,8 +749,8 @@ canvas {
     
     /* 円グラフのモバイル対応 */
     #serviceCompositionChart {
-        max-width: 300px !important;
-        max-height: 300px !important;
+        max-width: 350px !important;
+        max-height: 350px !important;
     }
     
     .summary-grid {

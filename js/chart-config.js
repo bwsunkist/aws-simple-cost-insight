@@ -42,7 +42,8 @@ const CHART_COLORS = {
  */
 const CHART_DEFAULTS = {
     responsive: true,
-    maintainAspectRatio: false,
+    maintainAspectRatio: true,
+    aspectRatio: 2,
     interaction: {
         intersect: false,
         mode: 'index'
@@ -295,8 +296,7 @@ function createServiceCompositionConfig(data, accountFilter = 'all') {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 1,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     position: 'right',

@@ -512,7 +512,7 @@ section h2 {
 /* グラフセクション */
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
     gap: 2rem;
 }
 
@@ -568,7 +568,36 @@ section h2 {
 /* Canvas要素 */
 canvas {
     max-width: 100%;
+    height: auto !important;
+    aspect-ratio: auto;
+}
+
+/* 円グラフ専用の真円保持 */
+#serviceCompositionChart {
+    max-width: 400px !important;
+    max-height: 400px !important;
+    aspect-ratio: 1 / 1 !important;
+    margin: 0 auto !important;
+}
+
+/* その他のチャートは適切なアスペクト比を維持 */
+#monthlyTrendChart,
+#serviceComparisonChart,
+#serviceStackedChart {
     height: 300px !important;
+    max-width: 100%;
+}
+
+/* 削減効果比較・期間比較チャート */
+#reductionEffectChart canvas,
+#periodComparisonChart canvas {
+    height: 300px !important;
+    max-width: 100%;
+}
+
+/* 増減率チャートとテーブル */
+#growthRateTable {
+    min-height: 200px;
 }
 
 /* 増減率テーブル */
@@ -706,6 +735,7 @@ canvas {
     
     .charts-grid {
         grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
     
     .chart-container {
@@ -714,6 +744,12 @@ canvas {
     
     canvas {
         height: 250px !important;
+    }
+    
+    /* 円グラフのモバイル対応 */
+    #serviceCompositionChart {
+        max-width: 300px !important;
+        max-height: 300px !important;
     }
     
     .summary-grid {

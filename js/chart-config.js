@@ -295,7 +295,8 @@ function createServiceCompositionConfig(data, accountFilter = 'all') {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 1,
             plugins: {
                 legend: {
                     position: 'right',

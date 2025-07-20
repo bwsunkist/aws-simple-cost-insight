@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## プロジェクト概要
-複数のAWSアカウントのコスト削減取り組みの効果測定と、削減優先度検討のための可視化ツールを開発する。
+複数のAWSアカウントのコスト分析をシンプルに行える可視化ツールを開発する。
 docs/requirements.mdに要件の詳細を記載している。
 
 ## 重要: ドキュメントファイル配置

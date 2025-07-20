@@ -20,13 +20,14 @@
             <!-- アカウント登録セクション -->
             <section class="account-registration-section">
                 <div class="registration-container">
-                    <h2>アカウント登録</h2>
+                    <h2>コストデータ登録</h2>
+                    
                     
                     <!-- 新規アカウント追加 -->
                     <div class="add-account-form">
                         <div class="form-row">
                             <div class="input-group">
-                                <label for="accountName">アカウント名</label>
+                                <label for="accountName">アカウント名（任意）</label>
                                 <input type="text" id="accountName" placeholder="dev, prod, staging など" class="account-input">
                             </div>
                             <div class="input-group">
@@ -37,9 +38,60 @@
                                         📁 ファイル選択
                                     </label>
                                 </div>
+                                <div class="csv-guide-link">
+                                    <span class="guide-link-text" onclick="toggleCsvGuide()">
+                                        CSVファイルの取得方法 <span class="info-icon">ℹ️</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         <div id="selectedFile" class="selected-file"></div>
+                        
+                        <!-- CSVファイル取得ガイド（非表示） -->
+                        <div id="csvGuide" class="csv-guide" style="display: none;">
+                            <div class="guide-header">
+                                <h3>📋 CSVファイルの取得方法</h3>
+                                <span class="guide-close" onclick="toggleCsvGuide()">×</span>
+                            </div>
+                            <div class="guide-steps">
+                                <div class="step">
+                                    <span class="step-number">1</span>
+                                    <div class="step-content">
+                                        <strong>AWS マネジメントコンソール</strong>にログイン
+                                    </div>
+                                </div>
+                                <div class="step">
+                                    <span class="step-number">2</span>
+                                    <div class="step-content">
+                                        <strong>Cost Explorer</strong> > <strong>新しいコストと使用状況レポート</strong> を開く
+                                    </div>
+                                </div>
+                                <div class="step">
+                                    <span class="step-number">3</span>
+                                    <div class="step-content">
+                                        <strong>「レポートパラメータ」</strong>をクリックしてメニューを開き、<strong>粒度</strong>=月別、<strong>ディメンション</strong>=サービス であることを確認
+                                        <span class="step-detail-toggle" onclick="toggleStepDetail(3)">📋 詳細</span>
+                                        <div id="step-detail-3" class="step-detail" style="display: none;">
+                                            <div class="detail-content">
+                                                <strong>⚠️ 重要な設定項目：</strong>
+                                                <ul>
+                                                    <li><strong>日付範囲：</strong> 推奨6ヶ月以上（例：2025-01-01 〜 2025-06-30）</li>
+                                                    <li><strong>粒度：</strong> 月別（デフォルト - 変更不要）</li>
+                                                    <li><strong>ディメンション：</strong> サービス（デフォルト - 変更不要）</li>
+                                                    <li><strong>注意：</strong> 日別など他の粒度に変更するとデータ形式が変わり、ツールで正常に読み込めません</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="step">
+                                    <span class="step-number">4</span>
+                                    <div class="step-content">
+                                        <strong>CSV形式でダウンロード</strong>してファイルを取得
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <button id="addAccountBtn" class="add-btn" disabled>アカウントを追加</button>
                     </div>
 
@@ -238,5 +290,36 @@
     <script src="js/csv-parser.js"></script>
     <script src="js/chart-config.js"></script>
     <script src="js/app.js"></script>
+    
+    <script>
+        // CSV取得ガイドの表示/非表示トグル機能
+        function toggleCsvGuide() {
+            const guide = document.getElementById('csvGuide');
+            
+            if (guide.style.display === 'none') {
+                guide.style.display = 'block';
+            } else {
+                guide.style.display = 'none';
+            }
+        }
+        
+        // CSV取得ガイドの詳細表示トグル機能
+        function toggleStepDetail(stepNumber) {
+            const detail = document.getElementById(`step-detail-${stepNumber}`);
+            const toggle = detail.previousElementSibling;
+            
+            if (detail.style.display === 'none') {
+                detail.style.display = 'block';
+                toggle.textContent = '📝 閉じる';
+                toggle.style.background = '#0ea5e9';
+                toggle.style.color = 'white';
+            } else {
+                detail.style.display = 'none';
+                toggle.textContent = '📋 詳細';
+                toggle.style.background = '#f0f9ff';
+                toggle.style.color = '#0369a1';
+            }
+        }
+    </script>
 </body>
 </html>

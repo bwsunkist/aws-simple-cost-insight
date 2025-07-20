@@ -6,6 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 複数のAWSアカウントのコスト削減取り組みの効果測定と、削減優先度検討のための可視化ツールを開発する。
 docs/requirements.mdに要件の詳細を記載している。
 
+## 重要: ドキュメントファイル配置
+**プロジェクトドキュメントは全て `docs/` ディレクトリに配置されています。**
+- `docs/requirements.md` - 機能要件定義
+- `docs/task-progress.md` - タスク進捗管理
+- `docs/development-log.md` - 開発ログ・履歴
+- `docs/ISSUES.md` - Issue管理・追跡
+
+ドキュメント検索時は必ずdocs/ディレクトリ内を確認してください。
+
 ## 技術スタック
 - **HTML5** - 基本構造とUI
 - **Vanilla JavaScript** - CSV読み込み・データ処理・DOM操作
@@ -91,7 +100,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - 複数の小さな関連コミットは一度にプッシュしても可
 
 ## 開発ログ管理
-### docs/development-log.md 運用ルール
+### `docs/development-log.md` 運用ルール
 - **継続更新**: 主要な開発活動・技術的決定を随時記録
 - **記録タイミング**: 
   - 新機能実装完了時
@@ -172,7 +181,7 @@ tests/fixtures/
 
 ### Issue管理・記録ルール
 - **Issue発見時の対応**:
-  - 即座にdocs/ISSUES.mdに詳細記録
+  - 即座に`docs/ISSUES.md`に詳細記録
   - Issue ID（連番）で管理
   - 発見日時・症状・再現手順を記録
   - 重要度（Critical/High/Medium/Low）設定
@@ -192,7 +201,7 @@ tests/fixtures/
   - 検証完了時: Verifiedに更新
 
 ## タスク管理・進捗追跡
-### docs/task-progress.md 運用ルール
+### `docs/task-progress.md` 運用ルール
 - **進捗管理**: 実装計画を詳細タスクに分解し、ステータス管理
 - **ステータス定義**:
   - 🔲 **未実施**: まだ開始していないタスク
@@ -241,13 +250,13 @@ tests/fixtures/
   - コンソールエラーチェック
 
 #### 5. ドキュメント更新（必須3ファイル）
-- **docs/development-log.md更新**:
+- **`docs/development-log.md`更新**:
   - 実施内容・技術的決定・ファイル変更履歴
   - 日付・概要・詳細作業項目記録
-- **docs/task-progress.md更新**:
+- **`docs/task-progress.md`更新**:
   - 完了タスクのステータス更新（🔲→✅）
   - 進捗サマリー・パーセンテージ更新
-- **docs/ISSUES.md更新**:
+- **`docs/ISSUES.md`更新**:
   - 新Issue発見時の詳細記録
   - 修正完了時のステータス・検証結果更新
 

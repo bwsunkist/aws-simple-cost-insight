@@ -632,6 +632,222 @@ function createPeriodComparisonChartConfig(periodData) {
 }
 
 /**
+ * Create service stacked chart configuration
+ * @param {Object} data - Aggregated multi-account data
+ * @param {string} accountFilter - 'all' or specific account name
+ * @param {number} topServicesCount - Number of top services to show individually (1-10)
+ * @returns {Object} Chart.js configuration
+ */
+function createServiceStackedConfig(data, accountFilter = 'all', topServicesCount = 5) {
+    if (!data || !data.monthlyTrends) {
+        return createEmptyChartConfig('月次データがありません');
+    }
+
+    // Get monthly data for stacked chart
+    const monthlyData = getStackedMonthlyData(data, accountFilter, topServicesCount);
+    
+    if (!monthlyData.labels.length) {
+        return createEmptyChartConfig('表示するデータがありません');
+    }
+
+    const { labels, datasets } = monthlyData;
+
+    return {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: `月次サービス別コスト積み上げ ${accountFilter === 'all' ? '(全アカウント)' : `(${accountFilter})`}`,
+                    font: { size: 14, weight: 'bold' }
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    ...CHART_DEFAULTS.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            const datasetLabel = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            return `${datasetLabel}: ${formatCurrency(value)}`;
+                        },
+                        footer: function(tooltipItems) {
+                            let total = 0;
+                            tooltipItems.forEach(item => total += item.parsed.y);
+                            return `合計: ${formatCurrency(total)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: { font: { size: 11 } }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'コスト ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+
+/**
+ * Get monthly data for stacked chart
+ * @param {Object} data - Aggregated data
+ * @param {string} accountFilter - Account filter
+ * @param {number} topServicesCount - Number of top services
+ * @returns {Object} Labels and datasets for chart
+ */
+function getStackedMonthlyData(data, accountFilter, topServicesCount) {
+    // Get all service names and calculate total costs
+    const serviceMap = new Map();
+    
+    // Collect service data from monthly trends
+    data.monthlyTrends.forEach(trend => {
+        const monthData = getMonthDataForAccount(data, trend.date, accountFilter);
+        
+        Object.entries(monthData.services || {}).forEach(([service, cost]) => {
+            if (service !== '合計コスト') {
+                const currentTotal = serviceMap.get(service) || 0;
+                serviceMap.set(service, currentTotal + cost);
+            }
+        });
+    });
+
+    // Sort services by total cost and get top N
+    const sortedServices = Array.from(serviceMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, topServicesCount)
+        .map(entry => entry[0]);
+
+    // Add "その他" if there are more services
+    const showOthers = serviceMap.size > topServicesCount;
+    if (showOthers) {
+        sortedServices.push('その他');
+    }
+
+    // Create labels (months)
+    const labels = data.monthlyTrends.map(trend => 
+        new Date(trend.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+    );
+
+    // Create datasets for each service
+    const colors = generateColors(sortedServices.length, 'services');
+    const datasets = sortedServices.map((service, index) => {
+        const monthlyValues = data.monthlyTrends.map(trend => {
+            const monthData = getMonthDataForAccount(data, trend.date, accountFilter);
+            
+            if (service === 'その他') {
+                // Calculate "others" cost
+                let othersTotal = 0;
+                Object.entries(monthData.services || {}).forEach(([serviceName, cost]) => {
+                    if (serviceName !== '合計コスト' && !sortedServices.slice(0, -1).includes(serviceName)) {
+                        othersTotal += cost;
+                    }
+                });
+                return othersTotal;
+            } else {
+                return monthData.services?.[service] || 0;
+            }
+        });
+
+        return {
+            label: service,
+            data: monthlyValues,
+            backgroundColor: colors[index],
+            borderColor: colors[index],
+            borderWidth: 1
+        };
+    });
+
+    return { labels, datasets };
+}
+
+/**
+ * Get month data for specific account or all accounts
+ * @param {Object} data - Aggregated data
+ * @param {string} date - Month date
+ * @param {string} accountFilter - Account filter
+ * @returns {Object} Month data with services
+ */
+function getMonthDataForAccount(data, date, accountFilter) {
+    if (accountFilter === 'all') {
+        // Aggregate all accounts for this month
+        const monthData = { services: {} };
+        
+        data.accounts.forEach(account => {
+            const accountMonthData = getAccountMonthData(account.name, date);
+            if (accountMonthData) {
+                // Convert direct service properties to services object
+                Object.entries(accountMonthData).forEach(([key, cost]) => {
+                    if (key !== 'date' && key !== 'totalCost' && typeof cost === 'number') {
+                        monthData.services[key] = (monthData.services[key] || 0) + cost;
+                    }
+                });
+            }
+        });
+        
+        return monthData;
+    } else {
+        // Get specific account data and convert to services format
+        const accountMonthData = getAccountMonthData(accountFilter, date);
+        if (!accountMonthData) return { services: {} };
+        
+        const services = {};
+        Object.entries(accountMonthData).forEach(([key, cost]) => {
+            if (key !== 'date' && key !== 'totalCost' && typeof cost === 'number') {
+                services[key] = cost;
+            }
+        });
+        
+        return { services };
+    }
+}
+
+/**
+ * Get specific account's month data
+ * @param {string} accountName - Account name
+ * @param {string} date - Month date
+ * @returns {Object|null} Month data
+ */
+function getAccountMonthData(accountName, date) {
+    // Find the account in registered accounts
+    const account = registeredAccounts.find(acc => acc.name === accountName);
+    if (!account || !account.data.monthlyData) return null;
+    
+    // Find the month data
+    return account.data.monthlyData.find(month => month.date === date);
+}
+
+/**
  * Generate chart colors for dynamic datasets
  * @param {number} count - Number of colors needed
  * @param {string} type - 'accounts' or 'services'
@@ -658,6 +874,7 @@ if (typeof module !== 'undefined' && module.exports) {
         createMonthlyTrendConfig,
         createServiceComparisonConfig,
         createServiceCompositionConfig,
+        createServiceStackedConfig,
         createReductionEffectChartConfig,
         createPeriodComparisonChartConfig,
         createEmptyChartConfig,

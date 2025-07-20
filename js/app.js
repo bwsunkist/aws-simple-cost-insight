@@ -92,6 +92,9 @@ function cacheElements() {
         trendViewRadios: document.querySelectorAll('input[name="trendView"]'),
         serviceComparisonPeriod: document.getElementById('serviceComparisonPeriod'),
         compositionAccount: document.getElementById('compositionAccount'),
+        stackedAccount: document.getElementById('stackedAccount'),
+        topServicesCount: document.getElementById('topServicesCount'),
+        serviceStackedChart: document.getElementById('serviceStackedChart'),
         growthRateTable: document.getElementById('growthRateTable')
     };
 }
@@ -120,6 +123,14 @@ function setupEventListeners() {
     
     if (elements.compositionAccount) {
         elements.compositionAccount.addEventListener('change', handleCompositionAccountChange);
+    }
+    
+    if (elements.stackedAccount) {
+        elements.stackedAccount.addEventListener('change', handleStackedAccountChange);
+    }
+    
+    if (elements.topServicesCount) {
+        elements.topServicesCount.addEventListener('change', handleTopServicesCountChange);
     }
     
     // Threshold setting
@@ -412,8 +423,15 @@ function displayCharts() {
     const compositionConfig = createServiceCompositionConfig(aggregatedData, compositionAccount);
     chartInstances.serviceComposition = new Chart(elements.serviceCompositionChart, compositionConfig);
     
-    // Update composition account options
+    // Create service stacked chart
+    const stackedAccount = elements.stackedAccount?.value || 'all';
+    const topServicesCount = parseInt(elements.topServicesCount?.value || 5);
+    const stackedConfig = createServiceStackedConfig(aggregatedData, stackedAccount, topServicesCount);
+    chartInstances.serviceStacked = new Chart(elements.serviceStackedChart, stackedConfig);
+    
+    // Update account options
     updateCompositionAccountOptions();
+    updateStackedAccountOptions();
 }
 
 /**
@@ -520,6 +538,29 @@ function handleCompositionAccountChange(event) {
     if (aggregatedData && chartInstances.serviceComposition) {
         const newConfig = createServiceCompositionConfig(aggregatedData, event.target.value);
         updateChart(chartInstances.serviceComposition, newConfig);
+    }
+}
+
+/**
+ * Handle stacked account change
+ */
+function handleStackedAccountChange(event) {
+    if (aggregatedData && chartInstances.serviceStacked) {
+        const topServicesCount = parseInt(elements.topServicesCount?.value || 5);
+        const newConfig = createServiceStackedConfig(aggregatedData, event.target.value, topServicesCount);
+        updateChart(chartInstances.serviceStacked, newConfig);
+    }
+}
+
+/**
+ * Handle top services count change
+ */
+function handleTopServicesCountChange(event) {
+    if (aggregatedData && chartInstances.serviceStacked) {
+        const stackedAccount = elements.stackedAccount?.value || 'all';
+        const topServicesCount = parseInt(event.target.value);
+        const newConfig = createServiceStackedConfig(aggregatedData, stackedAccount, topServicesCount);
+        updateChart(chartInstances.serviceStacked, newConfig);
     }
 }
 
@@ -698,6 +739,20 @@ function updateCompositionAccountOptions() {
     });
     
     elements.compositionAccount.innerHTML = options.join('');
+}
+
+/**
+ * Update stacked account select options
+ */
+function updateStackedAccountOptions() {
+    if (!elements.stackedAccount || !aggregatedData) return;
+    
+    const options = ['<option value="all">全アカウント</option>'];
+    registeredAccounts.forEach(account => {
+        options.push(`<option value="${escapeHtml(account.name)}">${escapeHtml(account.name)}</option>`);
+    });
+    
+    elements.stackedAccount.innerHTML = options.join('');
 }
 
 /**

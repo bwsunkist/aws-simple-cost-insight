@@ -589,6 +589,37 @@ canvas {
     max-width: 100%;
 }
 
+/* レスポンシブ対応: チャートの高さ調整 */
+@media (max-width: 768px) {
+    #monthlyTrendChart,
+    #serviceComparisonChart,
+    #serviceStackedChart {
+        height: 300px !important;
+    }
+    
+    #serviceCompositionChart {
+        width: 350px !important;
+        height: 350px !important;
+        max-width: 350px !important;
+        max-height: 350px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #monthlyTrendChart,
+    #serviceComparisonChart,
+    #serviceStackedChart {
+        height: 250px !important;
+    }
+    
+    #serviceCompositionChart {
+        width: 300px !important;
+        height: 300px !important;
+        max-width: 300px !important;
+        max-height: 300px !important;
+    }
+}
+
 /* 削減効果比較・期間比較チャート */
 #reductionEffectChart canvas,
 #periodComparisonChart canvas {
@@ -743,15 +774,7 @@ canvas {
         padding: 1rem;
     }
     
-    canvas {
-        height: 250px !important;
-    }
-    
-    /* 円グラフのモバイル対応 */
-    #serviceCompositionChart {
-        max-width: 350px !important;
-        max-height: 350px !important;
-    }
+    /* チャートサイズは上部の@media (max-width: 768px)で統一管理 */
     
     .summary-grid {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -796,9 +819,7 @@ canvas {
         font-size: 0.9rem;
     }
     
-    canvas {
-        height: 200px !important;
-    }
+    /* チャートサイズは上部の@media (max-width: 480px)で統一管理 */
     
     .charts-grid {
         gap: 1rem;

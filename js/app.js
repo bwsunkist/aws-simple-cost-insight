@@ -76,6 +76,18 @@ function cacheElements() {
         lowUsageThreshold: document.getElementById('lowUsageThreshold'),
         highCostServices: document.getElementById('highCostServices'),
         
+        // Reduction effect comparison
+        comparisonBaseline: document.getElementById('comparisonBaseline'),
+        reductionEffectChart: document.getElementById('reductionEffectChart'),
+        reductionEffectTable: document.getElementById('reductionEffectTable'),
+        
+        // Period comparison
+        startDate: document.getElementById('startDate'),
+        endDate: document.getElementById('endDate'),
+        comparePeriodBtn: document.getElementById('comparePeriodBtn'),
+        periodComparisonChart: document.getElementById('periodComparisonChart'),
+        periodComparisonTable: document.getElementById('periodComparisonTable'),
+        
         // Chart controls
         trendViewRadios: document.querySelectorAll('input[name="trendView"]'),
         serviceComparisonPeriod: document.getElementById('serviceComparisonPeriod'),
@@ -113,6 +125,22 @@ function setupEventListeners() {
     // Threshold setting
     if (elements.lowUsageThreshold) {
         elements.lowUsageThreshold.addEventListener('input', handleThresholdChange);
+    }
+    
+    // Reduction effect comparison
+    if (elements.comparisonBaseline) {
+        elements.comparisonBaseline.addEventListener('change', handleComparisonBaselineChange);
+    }
+    
+    // Period comparison
+    if (elements.startDate) {
+        elements.startDate.addEventListener('change', validatePeriodSelection);
+    }
+    if (elements.endDate) {
+        elements.endDate.addEventListener('change', validatePeriodSelection);
+    }
+    if (elements.comparePeriodBtn) {
+        elements.comparePeriodBtn.addEventListener('click', handlePeriodComparison);
     }
 }
 
@@ -420,6 +448,12 @@ function displayAnalysisResults() {
     
     // Growth rate table
     displayGrowthRateTable();
+    
+    // Reduction effect comparison
+    displayReductionEffectComparison();
+    
+    // Initialize period comparison controls
+    validatePeriodSelection();
 }
 
 /**
@@ -515,6 +549,141 @@ function updateLowUsageServicesDisplay() {
             `<li>${escapeHtml(service)} <span class="service-cost">${formatCurrency(cost)}</span></li>`
           ).join('')}</ul>`
         : `<p>閾値 $${threshold.toFixed(2)} 以下のサービスはありません</p>`;
+}
+
+/**
+ * Display reduction effect comparison
+ */
+function displayReductionEffectComparison() {
+    if (!registeredAccounts.length || !elements.reductionEffectTable) return;
+    
+    const baseline = elements.comparisonBaseline?.value || 'first-month';
+    const reductionData = calculateReductionEffects(baseline);
+    
+    // Update table
+    const tableHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>アカウント</th>
+                    <th>基準コスト</th>
+                    <th>最新コスト</th>
+                    <th>削減額</th>
+                    <th>削減率</th>
+                    <th>効果</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${reductionData.map(data => `
+                    <tr>
+                        <td>${escapeHtml(data.accountName)}</td>
+                        <td>${formatCurrency(data.baselineCost)}</td>
+                        <td>${formatCurrency(data.latestCost)}</td>
+                        <td class="${data.reductionAmount >= 0 ? 'reduction-effect-positive' : 'reduction-effect-negative'}">
+                            ${data.reductionAmount >= 0 ? '+' : ''}${formatCurrency(Math.abs(data.reductionAmount))}
+                        </td>
+                        <td class="${data.reductionPercentage >= 0 ? 'reduction-effect-positive' : 'reduction-effect-negative'}">
+                            ${data.reductionPercentage >= 0 ? '+' : ''}${data.reductionPercentage.toFixed(1)}%
+                        </td>
+                        <td>${getReductionEffectIcon(data.reductionPercentage)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    elements.reductionEffectTable.innerHTML = tableHTML;
+    
+    // Update chart if needed
+    updateReductionEffectChart(reductionData);
+}
+
+/**
+ * Calculate reduction effects for all accounts
+ */
+function calculateReductionEffects(baseline) {
+    return registeredAccounts.map(account => {
+        const monthlyData = account.data.monthlyData;
+        if (!monthlyData || monthlyData.length < 2) {
+            return {
+                accountName: account.name,
+                baselineCost: 0,
+                latestCost: 0,
+                reductionAmount: 0,
+                reductionPercentage: 0
+            };
+        }
+        
+        const sortedData = monthlyData.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const latestCost = sortedData[sortedData.length - 1].totalCost;
+        
+        let baselineCost;
+        switch (baseline) {
+            case 'first-month':
+                baselineCost = sortedData[0].totalCost;
+                break;
+            case 'peak-month':
+                baselineCost = Math.max(...sortedData.map(d => d.totalCost));
+                break;
+            case 'previous-month':
+                baselineCost = sortedData.length > 1 ? sortedData[sortedData.length - 2].totalCost : latestCost;
+                break;
+            default:
+                baselineCost = sortedData[0].totalCost;
+        }
+        
+        const reductionAmount = baselineCost - latestCost;
+        const reductionPercentage = baselineCost > 0 ? (reductionAmount / baselineCost) * 100 : 0;
+        
+        return {
+            accountName: account.name,
+            baselineCost,
+            latestCost,
+            reductionAmount,
+            reductionPercentage
+        };
+    });
+}
+
+/**
+ * Get reduction effect icon
+ */
+function getReductionEffectIcon(percentage) {
+    if (percentage > 10) return '🎯'; // Excellent reduction
+    if (percentage > 5) return '✅'; // Good reduction  
+    if (percentage > 0) return '📉'; // Some reduction
+    if (percentage === 0) return '➡️'; // No change
+    return '📈'; // Cost increase
+}
+
+/**
+ * Handle comparison baseline change
+ */
+function handleComparisonBaselineChange(event) {
+    if (registeredAccounts.length > 0) {
+        displayReductionEffectComparison();
+    }
+}
+
+/**
+ * Update reduction effect chart
+ */
+function updateReductionEffectChart(reductionData) {
+    if (!elements.reductionEffectChart || !reductionData.length) return;
+    
+    // Create or update chart
+    const canvas = elements.reductionEffectChart.querySelector('canvas');
+    if (canvas && typeof Chart !== 'undefined') {
+        const ctx = canvas.getContext('2d');
+        
+        // Destroy existing chart
+        if (chartInstances.reductionEffect) {
+            chartInstances.reductionEffect.destroy();
+        }
+        
+        const config = createReductionEffectChartConfig(reductionData);
+        chartInstances.reductionEffect = new Chart(ctx, config);
+    }
 }
 
 /**
@@ -701,6 +870,198 @@ function getTrendIcon(trend) {
         case 'decreasing': return '📉';
         case 'stable': return '➡️';
         default: return '❓';
+    }
+}
+
+/**
+ * Validate period selection
+ */
+function validatePeriodSelection() {
+    if (!elements.startDate || !elements.endDate || !elements.comparePeriodBtn) return;
+    
+    const startDate = elements.startDate.value;
+    const endDate = elements.endDate.value;
+    const hasData = registeredAccounts.length > 0;
+    
+    const isValid = startDate && endDate && startDate <= endDate && hasData;
+    elements.comparePeriodBtn.disabled = !isValid;
+    
+    // Set min/max based on available data
+    if (aggregatedData && aggregatedData.dateRange) {
+        const dataStart = aggregatedData.dateRange.startDate.substring(0, 7); // YYYY-MM format
+        const dataEnd = aggregatedData.dateRange.endDate.substring(0, 7);
+        
+        if (!elements.startDate.min) {
+            elements.startDate.min = dataStart;
+            elements.startDate.max = dataEnd;
+        }
+        if (!elements.endDate.min) {
+            elements.endDate.min = dataStart;
+            elements.endDate.max = dataEnd;
+        }
+    }
+}
+
+/**
+ * Handle period comparison
+ */
+async function handlePeriodComparison() {
+    if (!registeredAccounts.length || !elements.startDate.value || !elements.endDate.value) {
+        showMessage('期間を選択してください', 'error');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        elements.comparePeriodBtn.disabled = true;
+        elements.comparePeriodBtn.textContent = '比較中...';
+        
+        const startDate = elements.startDate.value + '-01'; // Add day to make it a full date
+        const endDate = elements.endDate.value + '-01';
+        
+        console.log('Comparing periods:', startDate, 'to', endDate);
+        
+        // Calculate period comparison data
+        const comparisonData = calculatePeriodComparison(startDate, endDate);
+        
+        // Display results
+        displayPeriodComparisonResults(comparisonData);
+        
+        showMessage('期間比較分析が完了しました', 'success');
+        
+    } catch (error) {
+        console.error('Error in period comparison:', error);
+        showMessage(`期間比較エラー: ${error.message}`, 'error');
+    } finally {
+        // Reset button state
+        elements.comparePeriodBtn.disabled = false;
+        elements.comparePeriodBtn.textContent = '期間比較実行';
+        validatePeriodSelection();
+    }
+}
+
+/**
+ * Calculate period comparison data
+ */
+function calculatePeriodComparison(startDate, endDate) {
+    const startTime = new Date(startDate).getTime();
+    const endTime = new Date(endDate).getTime();
+    
+    return registeredAccounts.map(account => {
+        const monthlyData = account.data.monthlyData || [];
+        
+        // Filter data within the specified period
+        const periodData = monthlyData.filter(month => {
+            const monthTime = new Date(month.date).getTime();
+            return monthTime >= startTime && monthTime <= endTime;
+        });
+        
+        if (periodData.length === 0) {
+            return {
+                accountName: account.name,
+                totalCost: 0,
+                avgMonthlyCost: 0,
+                monthCount: 0,
+                services: {},
+                trend: 'no-data'
+            };
+        }
+        
+        // Calculate statistics for the period
+        const totalCost = periodData.reduce((sum, month) => sum + month.totalCost, 0);
+        const avgMonthlyCost = totalCost / periodData.length;
+        
+        // Aggregate services for the period
+        const services = {};
+        periodData.forEach(month => {
+            if (month.services) {
+                Object.entries(month.services).forEach(([service, cost]) => {
+                    services[service] = (services[service] || 0) + cost;
+                });
+            }
+        });
+        
+        // Calculate trend
+        let trend = 'stable';
+        if (periodData.length >= 2) {
+            const firstMonth = periodData[0].totalCost;
+            const lastMonth = periodData[periodData.length - 1].totalCost;
+            const change = ((lastMonth - firstMonth) / firstMonth) * 100;
+            
+            if (change > 5) trend = 'increasing';
+            else if (change < -5) trend = 'decreasing';
+        }
+        
+        return {
+            accountName: account.name,
+            totalCost,
+            avgMonthlyCost,
+            monthCount: periodData.length,
+            services,
+            trend,
+            startDate,
+            endDate
+        };
+    });
+}
+
+/**
+ * Display period comparison results
+ */
+function displayPeriodComparisonResults(comparisonData) {
+    if (!elements.periodComparisonTable || !comparisonData.length) return;
+    
+    // Create summary table
+    const tableHTML = `
+        <h4>期間サマリー (${comparisonData[0].startDate.substring(0, 7)} 〜 ${comparisonData[0].endDate.substring(0, 7)})</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>アカウント</th>
+                    <th>期間内総コスト</th>
+                    <th>月平均コスト</th>
+                    <th>対象月数</th>
+                    <th>トレンド</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${comparisonData.map(data => `
+                    <tr>
+                        <td>${escapeHtml(data.accountName)}</td>
+                        <td>${formatCurrency(data.totalCost)}</td>
+                        <td>${formatCurrency(data.avgMonthlyCost)}</td>
+                        <td>${data.monthCount}ヶ月</td>
+                        <td class="growth-${data.trend}">${getTrendIcon(data.trend)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    elements.periodComparisonTable.innerHTML = tableHTML;
+    
+    // Update chart
+    updatePeriodComparisonChart(comparisonData);
+}
+
+/**
+ * Update period comparison chart
+ */
+function updatePeriodComparisonChart(comparisonData) {
+    if (!elements.periodComparisonChart || !comparisonData.length) return;
+    
+    // Create or update chart
+    const canvas = elements.periodComparisonChart.querySelector('canvas');
+    if (canvas && typeof Chart !== 'undefined') {
+        const ctx = canvas.getContext('2d');
+        
+        // Destroy existing chart
+        if (chartInstances.periodComparison) {
+            chartInstances.periodComparison.destroy();
+        }
+        
+        const config = createPeriodComparisonChartConfig(comparisonData);
+        chartInstances.periodComparison = new Chart(ctx, config);
     }
 }
 

@@ -398,6 +398,240 @@ function formatCurrency(value, decimals = 4) {
 }
 
 /**
+ * Create bar chart configuration for reduction effect comparison
+ * @param {Array} reductionData - Account reduction effect data
+ * @returns {Object} Chart.js configuration
+ */
+function createReductionEffectChartConfig(reductionData) {
+    if (!reductionData || reductionData.length === 0) {
+        return createEmptyChartConfig('削減効果データがありません');
+    }
+
+    const labels = reductionData.map(data => data.accountName);
+    const reductionAmounts = reductionData.map(data => data.reductionAmount);
+    const reductionPercentages = reductionData.map(data => data.reductionPercentage);
+
+    return {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '削減額 ($)',
+                    data: reductionAmounts,
+                    backgroundColor: reductionAmounts.map(amount => 
+                        amount >= 0 ? 'rgba(72, 187, 120, 0.7)' : 'rgba(229, 62, 62, 0.7)'
+                    ),
+                    borderColor: reductionAmounts.map(amount => 
+                        amount >= 0 ? 'rgba(72, 187, 120, 1)' : 'rgba(229, 62, 62, 1)'
+                    ),
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                },
+                {
+                    label: '削減率 (%)',
+                    data: reductionPercentages,
+                    type: 'line',
+                    borderColor: CHART_COLORS.primary,
+                    backgroundColor: CHART_COLORS.primary + '20',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    yAxisID: 'y1',
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'アカウント別削減効果比較',
+                    font: { size: 14, weight: 'bold' }
+                },
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    ...CHART_DEFAULTS.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            const datasetLabel = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            if (datasetLabel.includes('削減額')) {
+                                return `${datasetLabel}: ${value >= 0 ? '+' : ''}${formatCurrency(Math.abs(value))}`;
+                            } else {
+                                return `${datasetLabel}: ${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 } }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: '削減額 ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: '削減率 (%)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(1) + '%';
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+
+/**
+ * Create period comparison chart configuration
+ * @param {Array} periodData - Period comparison data
+ * @returns {Object} Chart.js configuration
+ */
+function createPeriodComparisonChartConfig(periodData) {
+    if (!periodData || periodData.length === 0) {
+        return createEmptyChartConfig('期間比較データがありません');
+    }
+
+    const labels = periodData.map(data => data.accountName);
+    const totalCosts = periodData.map(data => data.totalCost);
+    const avgMonthlyCosts = periodData.map(data => data.avgMonthlyCost);
+
+    return {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '期間内総コスト ($)',
+                    data: totalCosts,
+                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y',
+                },
+                {
+                    label: '月平均コスト ($)',
+                    data: avgMonthlyCosts,
+                    type: 'line',
+                    borderColor: CHART_COLORS.warning,
+                    backgroundColor: CHART_COLORS.warning + '20',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    yAxisID: 'y1',
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: '期間指定コスト比較',
+                    font: { size: 14, weight: 'bold' }
+                },
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    ...CHART_DEFAULTS.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            const datasetLabel = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            return `${datasetLabel}: ${formatCurrency(value)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 } }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: '総コスト ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: '月平均コスト ($)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+
+/**
  * Generate chart colors for dynamic datasets
  * @param {number} count - Number of colors needed
  * @param {string} type - 'accounts' or 'services'
@@ -424,6 +658,8 @@ if (typeof module !== 'undefined' && module.exports) {
         createMonthlyTrendConfig,
         createServiceComparisonConfig,
         createServiceCompositionConfig,
+        createReductionEffectChartConfig,
+        createPeriodComparisonChartConfig,
         createEmptyChartConfig,
         updateChart,
         destroyChart,

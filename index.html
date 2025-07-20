@@ -159,6 +159,47 @@
                             <!-- 動的に生成 -->
                         </div>
                     </div>
+                    <div class="analysis-card full-width">
+                        <h3>アカウント別削減効果比較</h3>
+                        <div class="reduction-controls">
+                            <div class="period-selector">
+                                <label for="comparisonBaseline">比較基準:</label>
+                                <select id="comparisonBaseline">
+                                    <option value="first-month">初月比較</option>
+                                    <option value="peak-month">最高月比較</option>
+                                    <option value="previous-month">前月比較</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="reductionEffectChart" class="chart-container">
+                            <canvas></canvas>
+                        </div>
+                        <div id="reductionEffectTable" class="analysis-content">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                    <div class="analysis-card full-width">
+                        <h3>期間指定比較分析</h3>
+                        <div class="period-comparison-controls">
+                            <div class="date-range-selector">
+                                <div class="date-input-group">
+                                    <label for="startDate">開始月:</label>
+                                    <input type="month" id="startDate" class="date-input">
+                                </div>
+                                <div class="date-input-group">
+                                    <label for="endDate">終了月:</label>
+                                    <input type="month" id="endDate" class="date-input">
+                                </div>
+                                <button id="comparePeriodBtn" class="compare-btn">期間比較実行</button>
+                            </div>
+                        </div>
+                        <div id="periodComparisonChart" class="chart-container">
+                            <canvas></canvas>
+                        </div>
+                        <div id="periodComparisonTable" class="analysis-content">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>

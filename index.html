@@ -155,16 +155,12 @@
                         <canvas id="monthlyTrendChart"></canvas>
                     </div>
 
-                    <!-- サービス別コスト比較 -->
+                    <!-- 前月比増減率 -->
                     <div class="chart-container">
-                        <h3>サービス別コスト比較</h3>
-                        <div class="chart-controls">
-                            <select id="serviceComparisonPeriod">
-                                <option value="latest">最新月</option>
-                                <option value="total">全期間合計</option>
-                            </select>
+                        <h3>前月比増減率</h3>
+                        <div id="growthRateTable" class="growth-rate-table">
+                            <!-- 動的に生成される増減率テーブル -->
                         </div>
-                        <canvas id="serviceComparisonChart"></canvas>
                     </div>
 
                     <!-- サービス別構成比 -->
@@ -176,6 +172,18 @@
                             </select>
                         </div>
                         <canvas id="serviceCompositionChart"></canvas>
+                    </div>
+
+                    <!-- サービス別コスト比較 -->
+                    <div class="chart-container">
+                        <h3>サービス別コスト比較</h3>
+                        <div class="chart-controls">
+                            <select id="serviceComparisonPeriod">
+                                <option value="latest">最新月</option>
+                                <option value="total">全期間合計</option>
+                            </select>
+                        </div>
+                        <canvas id="serviceComparisonChart"></canvas>
                     </div>
 
                     <!-- 月次サービス別積み上げグラフ -->
@@ -199,14 +207,6 @@
                             </label>
                         </div>
                         <canvas id="serviceStackedChart"></canvas>
-                    </div>
-
-                    <!-- 前月比増減率 -->
-                    <div class="chart-container">
-                        <h3>前月比増減率</h3>
-                        <div id="growthRateTable" class="growth-rate-table">
-                            <!-- 動的に生成される増減率テーブル -->
-                        </div>
                     </div>
                 </div>
             </section>

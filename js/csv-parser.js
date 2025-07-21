@@ -311,6 +311,46 @@ function calculateGrowthRates(monthlyData) {
 }
 
 /**
+ * Calculate total growth rates from aggregated monthly trends
+ * @param {Array<Object>} monthlyTrends - Aggregated monthly trends data
+ * @returns {Object} Total growth rate calculations
+ */
+function calculateTotalGrowthRates(monthlyTrends) {
+    if (!Array.isArray(monthlyTrends) || monthlyTrends.length < 2) {
+        return { monthOverMonth: 0, totalGrowth: 0, trend: 'insufficient_data', latestCost: 0 };
+    }
+
+    const sortedData = monthlyTrends.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const latest = sortedData[sortedData.length - 1];
+    const previous = sortedData[sortedData.length - 2];
+    const earliest = sortedData[0];
+
+    // Month-over-month growth for total cost
+    const monthOverMonth = previous.totalCost > 0 
+        ? ((latest.totalCost - previous.totalCost) / previous.totalCost) * 100
+        : 0;
+
+    // Total period growth
+    const totalGrowth = earliest.totalCost > 0
+        ? ((latest.totalCost - earliest.totalCost) / earliest.totalCost) * 100
+        : 0;
+
+    // Determine trend
+    let trend = 'stable';
+    if (Math.abs(monthOverMonth) < 1) trend = 'stable';
+    else if (monthOverMonth > 0) trend = 'increasing';
+    else trend = 'decreasing';
+
+    return {
+        monthOverMonth: Math.round(monthOverMonth * 100) / 100,
+        totalGrowth: Math.round(totalGrowth * 100) / 100,
+        trend,
+        latestCost: latest.totalCost,
+        previousCost: previous.totalCost
+    };
+}
+
+/**
  * Read CSV file using File API
  * @param {File} file - File object from input
  * @returns {Promise<string>} Promise resolving to CSV content

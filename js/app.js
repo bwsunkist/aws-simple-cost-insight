@@ -474,6 +474,11 @@ function displayAnalysisResults() {
 function displayGrowthRateTable() {
     if (!registeredAccounts.length) return;
     
+    // Calculate total growth rate from aggregated data
+    const totalGrowthData = aggregatedData && aggregatedData.monthlyTrends && aggregatedData.monthlyTrends.length >= 2 
+        ? calculateTotalGrowthRates(aggregatedData.monthlyTrends)
+        : { latestCost: 0, monthOverMonth: 0, trend: 'stable' };
+    
     const tableHTML = `
         <table>
             <thead>
@@ -498,6 +503,14 @@ function displayGrowthRateTable() {
                         </tr>
                     `;
                 }).join('')}
+                <tr class="total-row">
+                    <td><strong>全体合計</strong></td>
+                    <td><strong>${formatCurrency(totalGrowthData.latestCost)}</strong></td>
+                    <td class="${totalGrowthData.monthOverMonth >= 0 ? 'growth-positive' : 'growth-negative'}">
+                        <strong>${totalGrowthData.monthOverMonth >= 0 ? '+' : ''}${totalGrowthData.monthOverMonth}%</strong>
+                    </td>
+                    <td class="growth-${totalGrowthData.trend}"><strong>${getTrendIcon(totalGrowthData.trend)}</strong></td>
+                </tr>
             </tbody>
         </table>
     `;

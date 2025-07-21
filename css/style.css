@@ -710,6 +710,15 @@ canvas {
     color: #718096;
 }
 
+.total-row {
+    border-top: 2px solid #667eea;
+    background: #f0f9ff;
+}
+
+.total-row td {
+    font-weight: 600;
+}
+
 /* 分析結果セクション */
 .analysis-grid {
     display: grid;

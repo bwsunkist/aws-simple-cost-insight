@@ -142,12 +142,11 @@ function initializeChartDefaults() {
 }
 
 /**
- * Create line chart configuration for monthly trends
+ * Create line chart configuration for monthly trends showing all accounts and total
  * @param {Object} data - Aggregated multi-account data
- * @param {string} viewMode - 'accounts' or 'total'
  * @returns {Object} Chart.js configuration
  */
-function createMonthlyTrendConfig(data, viewMode = 'accounts') {
+function createMonthlyTrendConfig(data) {
     if (!data || !data.monthlyTrends) {
         return createEmptyChartConfig('月次データがありません');
     }
@@ -157,33 +156,34 @@ function createMonthlyTrendConfig(data, viewMode = 'accounts') {
         new Date(trend.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
     );
 
-    if (viewMode === 'total') {
-        // Total cost trend
+    // Add individual account trends
+    data.accounts.forEach((account, index) => {
         datasets.push({
-            label: '全体合計',
-            data: data.monthlyTrends.map(trend => trend.totalCost),
-            borderColor: CHART_COLORS.primary,
-            backgroundColor: CHART_COLORS.primary + '20',
-            fill: true,
+            label: account.name,
+            data: data.monthlyTrends.map(trend => trend[account.name] || 0),
+            borderColor: CHART_COLORS.accounts[index % CHART_COLORS.accounts.length],
+            backgroundColor: CHART_COLORS.accounts[index % CHART_COLORS.accounts.length] + '20',
+            fill: false,
             tension: 0.3,
-            pointRadius: 4,
-            pointHoverRadius: 6
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2
         });
-    } else {
-        // Account-wise trends
-        data.accounts.forEach((account, index) => {
-            datasets.push({
-                label: account.name,
-                data: data.monthlyTrends.map(trend => trend[account.name] || 0),
-                borderColor: CHART_COLORS.accounts[index % CHART_COLORS.accounts.length],
-                backgroundColor: CHART_COLORS.accounts[index % CHART_COLORS.accounts.length] + '20',
-                fill: false,
-                tension: 0.3,
-                pointRadius: 3,
-                pointHoverRadius: 5
-            });
-        });
-    }
+    });
+
+    // Add total cost trend with distinctive styling
+    datasets.push({
+        label: '全体合計',
+        data: data.monthlyTrends.map(trend => trend.totalCost),
+        borderColor: CHART_COLORS.primary,
+        backgroundColor: CHART_COLORS.primary + '15',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 3,
+        borderDash: [5, 5] // Dashed line for total
+    });
 
     return {
         type: 'line',
@@ -194,7 +194,7 @@ function createMonthlyTrendConfig(data, viewMode = 'accounts') {
                 ...CHART_DEFAULTS.plugins,
                 title: {
                     display: true,
-                    text: viewMode === 'total' ? '月次コスト推移（全体）' : '月次コスト推移（アカウント別）',
+                    text: '月次コスト推移（アカウント別 + 全体合計）',
                     font: { size: 14, weight: 'bold' }
                 }
             }

@@ -89,7 +89,6 @@ function cacheElements() {
         periodComparisonTable: document.getElementById('periodComparisonTable'),
         
         // Chart controls
-        trendViewRadios: document.querySelectorAll('input[name="trendView"]'),
         serviceComparisonPeriod: document.getElementById('serviceComparisonPeriod'),
         compositionAccount: document.getElementById('compositionAccount'),
         stackedAccount: document.getElementById('stackedAccount'),
@@ -113,9 +112,6 @@ function setupEventListeners() {
     elements.analyzeBtn.addEventListener('click', handleAnalyzeData);
     
     // Chart controls
-    elements.trendViewRadios.forEach(radio => {
-        radio.addEventListener('change', handleTrendViewChange);
-    });
     
     if (elements.serviceComparisonPeriod) {
         elements.serviceComparisonPeriod.addEventListener('change', handleServicePeriodChange);
@@ -408,8 +404,7 @@ function displayCharts() {
     chartInstances = {};
     
     // Create monthly trend chart
-    const trendViewMode = document.querySelector('input[name="trendView"]:checked')?.value || 'accounts';
-    const trendConfig = createMonthlyTrendConfig(aggregatedData, trendViewMode);
+    const trendConfig = createMonthlyTrendConfig(aggregatedData);
     chartInstances.monthlyTrend = new Chart(elements.monthlyTrendChart, trendConfig);
     
     // Create service comparison chart
@@ -510,15 +505,6 @@ function displayGrowthRateTable() {
     elements.growthRateTable.innerHTML = tableHTML;
 }
 
-/**
- * Handle trend view change
- */
-function handleTrendViewChange(event) {
-    if (aggregatedData && chartInstances.monthlyTrend) {
-        const newConfig = createMonthlyTrendConfig(aggregatedData, event.target.value);
-        updateChart(chartInstances.monthlyTrend, newConfig);
-    }
-}
 
 /**
  * Handle service comparison period change

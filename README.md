@@ -1,6 +1,9 @@
 # aws-simple-cost-insight
 Visualize and compare AWS costs across multiple accounts using exported CSVs.
 
+## 🔒 データプライバシー
+**完全ローカル処理**: アップロードしたCSVデータはブラウザ内でのみ処理され、外部に送信されることは一切ありません。
+
 ## プロジェクト構成
 - **要件・仕様**: [docs/requirements.md](docs/requirements.md)
 - **開発ログ**: [docs/development-log.md](docs/development-log.md)

@@ -91,6 +91,7 @@ function cacheElements() {
         // Chart controls
         serviceComparisonPeriod: document.getElementById('serviceComparisonPeriod'),
         compositionAccount: document.getElementById('compositionAccount'),
+        compositionTopServicesCount: document.getElementById('compositionTopServicesCount'),
         stackedAccount: document.getElementById('stackedAccount'),
         topServicesCount: document.getElementById('topServicesCount'),
         serviceStackedChart: document.getElementById('serviceStackedChart'),
@@ -119,6 +120,10 @@ function setupEventListeners() {
     
     if (elements.compositionAccount) {
         elements.compositionAccount.addEventListener('change', handleCompositionAccountChange);
+    }
+    
+    if (elements.compositionTopServicesCount) {
+        elements.compositionTopServicesCount.addEventListener('change', handleCompositionTopServicesCountChange);
     }
     
     if (elements.stackedAccount) {
@@ -414,7 +419,8 @@ function displayCharts() {
     
     // Create service composition chart
     const compositionAccount = elements.compositionAccount?.value || 'all';
-    const compositionConfig = createServiceCompositionConfig(aggregatedData, compositionAccount);
+    const compositionTopServicesCount = parseInt(elements.compositionTopServicesCount?.value || 5);
+    const compositionConfig = createServiceCompositionConfig(aggregatedData, compositionAccount, compositionTopServicesCount);
     chartInstances.serviceComposition = new Chart(elements.serviceCompositionChart, compositionConfig);
     
     // Create service stacked chart
@@ -534,7 +540,20 @@ function handleServicePeriodChange(event) {
  */
 function handleCompositionAccountChange(event) {
     if (aggregatedData && chartInstances.serviceComposition) {
-        const newConfig = createServiceCompositionConfig(aggregatedData, event.target.value);
+        const compositionTopServicesCount = parseInt(elements.compositionTopServicesCount?.value || 5);
+        const newConfig = createServiceCompositionConfig(aggregatedData, event.target.value, compositionTopServicesCount);
+        updateChart(chartInstances.serviceComposition, newConfig);
+    }
+}
+
+/**
+ * Handle composition top services count change
+ */
+function handleCompositionTopServicesCountChange(event) {
+    if (aggregatedData && chartInstances.serviceComposition) {
+        const compositionAccount = elements.compositionAccount?.value || 'all';
+        const topServicesCount = parseInt(event.target.value);
+        const newConfig = createServiceCompositionConfig(aggregatedData, compositionAccount, topServicesCount);
         updateChart(chartInstances.serviceComposition, newConfig);
     }
 }

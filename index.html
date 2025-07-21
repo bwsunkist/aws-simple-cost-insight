@@ -167,9 +167,21 @@
                     <div class="chart-container">
                         <h3>サービス別構成比（最新月）</h3>
                         <div class="chart-controls">
-                            <select id="compositionAccount">
-                                <option value="all">全アカウント</option>
-                            </select>
+                            <label>
+                                <span>アカウント:</span>
+                                <select id="compositionAccount">
+                                    <option value="all">全アカウント</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>表示サービス数:</span>
+                                <select id="compositionTopServicesCount">
+                                    <option value="3">上位3サービス</option>
+                                    <option value="5" selected>上位5サービス</option>
+                                    <option value="7">上位7サービス</option>
+                                    <option value="10">上位10サービス</option>
+                                </select>
+                            </label>
                         </div>
                         <canvas id="serviceCompositionChart"></canvas>
                     </div>

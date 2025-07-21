@@ -274,9 +274,10 @@ function createServiceComparisonConfig(data, period = 'latest') {
  * Create pie chart configuration for service composition
  * @param {Object} data - Aggregated multi-account data
  * @param {string} accountFilter - 'all' or specific account name
+ * @param {number} topServicesCount - Number of top services to show individually (1-10)
  * @returns {Object} Chart.js configuration
  */
-function createServiceCompositionConfig(data, accountFilter = 'all') {
+function createServiceCompositionConfig(data, accountFilter = 'all', topServicesCount = 5) {
     if (!data || !data.serviceAggregation) {
         return createEmptyChartConfig('構成比データがありません');
     }
@@ -311,8 +312,8 @@ function createServiceCompositionConfig(data, accountFilter = 'all') {
         return createEmptyChartConfig('合計コストが0です');
     }
 
-    // Calculate percentages with proper validation
-    const filteredData = services
+    // Calculate percentages with proper validation and sort by value
+    const allServiceData = services
         .map((service, index) => {
             const value = values[index];
             const percentage = (value / total) * 100;
@@ -325,13 +326,31 @@ function createServiceCompositionConfig(data, accountFilter = 'all') {
         .filter(item => item.value > 0 && isFinite(item.percentage))
         .sort((a, b) => b.value - a.value);
 
+    // Get top N services and group others
+    const topServices = allServiceData.slice(0, topServicesCount);
+    const otherServices = allServiceData.slice(topServicesCount);
+    
+    let filteredData = [...topServices];
+    
+    // Add "その他" if there are services to group
+    if (otherServices.length > 0) {
+        const othersTotal = otherServices.reduce((sum, item) => sum + item.value, 0);
+        const othersPercentage = (othersTotal / total) * 100;
+        
+        filteredData.push({
+            service: 'その他',
+            value: othersTotal,
+            percentage: othersPercentage
+        });
+    }
+
     return {
         type: 'pie',
         data: {
             labels: filteredData.map(item => `${item.service} (${item.percentage.toFixed(1)}%)`),
             datasets: [{
                 data: filteredData.map(item => item.value),
-                backgroundColor: CHART_COLORS.services.slice(0, filteredData.length),
+                backgroundColor: getCompositionColors(filteredData, topServicesCount),
                 borderColor: '#fff',
                 borderWidth: 2,
                 hoverOffset: 10
@@ -910,6 +929,27 @@ function generateColors(count, type = 'services') {
     for (let i = 0; i < count; i++) {
         colors.push(baseColors[i % baseColors.length]);
     }
+    
+    return colors;
+}
+
+/**
+ * Get colors for service composition chart with special handling for "その他"
+ * @param {Array} data - Filtered data array
+ * @param {number} topServicesCount - Number of top services
+ * @returns {Array} Array of color strings
+ */
+function getCompositionColors(data, topServicesCount) {
+    const colors = [];
+    const othersColor = '#d1d5db'; // Light gray for "その他"
+    
+    data.forEach((item, index) => {
+        if (item.service === 'その他') {
+            colors.push(othersColor);
+        } else {
+            colors.push(CHART_COLORS.services[index % CHART_COLORS.services.length]);
+        }
+    });
     
     return colors;
 }

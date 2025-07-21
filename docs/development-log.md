@@ -1367,4 +1367,68 @@ Phase 3.3「期間指定比較分析」機能を完全実装し、Phase 3（中�
 - ✅ 円グラフが真円で表示される
 - ✅ 全チャートが適切なアスペクト比を維持
 - ✅ レスポンシブデザインでの表示品質向上
+
+## 2025-07-21 UI改善: 月次コスト推移グラフの統合表示実装
+
+### 概要
+月次コスト推移グラフのラジオボタン切り替えを削除し、全アカウントと合計を同時表示する統合ビューに改善。操作性向上とデータ可視化の効率化を実現。
+
+### 実施内容
+
+#### 1. ラジオボタン制御の削除
+**HTML構造変更 (`index.html`)**:
+- 月次コスト推移セクションからラジオボタン制御を完全削除
+- シンプルなヘッダー構造に変更
+
+#### 2. チャート設定関数の統合改善
+**`createMonthlyTrendConfig`関数 (`js/chart-config.js`)**:
+```javascript
+// 個別アカウント線の追加
+data.accounts.forEach((account, index) => {
+    datasets.push({
+        label: account.name,
+        data: data.monthlyTrends.map(trend => trend[account.name] || 0),
+        borderColor: CHART_COLORS.accounts[index % CHART_COLORS.accounts.length],
+        borderWidth: 2
+    });
+});
+
+// 全体合計線（破線スタイル）の追加
+datasets.push({
+    label: '全体合計',
+    data: data.monthlyTrends.map(trend => trend.totalCost),
+    borderColor: CHART_COLORS.primary,
+    borderWidth: 3,
+    borderDash: [5, 5] // 破線で区別
+});
+```
+
+#### 3. JavaScript制御ロジックの簡素化
+**イベント処理削除 (`js/app.js`)**:
+- `trendViewRadios`要素選択の削除
+- `handleTrendViewChange`関数の完全削除
+- `displayCharts`での統合チャート生成
+
+#### 4. チャートタイトルの更新
+- 「月次コスト推移（アカウント別 + 全体合計）」に変更
+- 統合表示を明確に示すタイトル
+
+### 技術的決定事項
+- **視覚的区別**: 個別アカウントは実線、全体合計は破線で表示
+- **色分け**: アカウント別色とプライマリカラーでの明確な区別
+- **UI簡素化**: 不要なラジオボタン削除によるユーザビリティ向上
+
+### 変更ファイル
+- `index.html`: ラジオボタン制御HTML削除
+- `js/chart-config.js`: `createMonthlyTrendConfig`関数の統合表示実装
+- `js/app.js`: イベント処理・関数削除、統合チャート生成
+
+### E2E検証結果
+- Playwright検証: 統合チャート正常表示確認
+- アカウント線と合計線の同時表示動作確認
+- UI簡素化による操作フロー改善確認
+
+### Git操作
+- コミットハッシュ: 7b25d78
+- コミットメッセージ: "Improve monthly trend chart to show all accounts and total together"
 - ✅ 横長変形の解消

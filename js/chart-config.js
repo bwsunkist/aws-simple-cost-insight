@@ -70,7 +70,7 @@ const CHART_DEFAULTS = {
                 label: function(context) {
                     const label = context.dataset.label || '';
                     const value = context.parsed.y || context.parsed;
-                    return `${label}: $${value.toFixed(4)}`;
+                    return `${label}: $${Math.round(value).toLocaleString()}`;
                 }
             }
         }
@@ -96,7 +96,7 @@ const CHART_DEFAULTS = {
                     size: 11
                 },
                 callback: function(value) {
-                    return '$' + value.toFixed(4);
+                    return '$' + Math.round(value);
                 }
             }
         }
@@ -317,7 +317,7 @@ function createServiceCompositionConfig(data, accountFilter = 'all') {
                             const label = context.label || '';
                             const value = context.parsed;
                             const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: $${value.toFixed(4)} (${percentage}%)`;
+                            return `${label}: $${Math.round(value).toLocaleString()} (${percentage}%)`;
                         }
                     }
                 }
@@ -392,9 +392,9 @@ function destroyChart(chartInstance) {
  * @param {number} decimals - Number of decimal places
  * @returns {string} Formatted currency string
  */
-function formatCurrency(value, decimals = 4) {
-    if (typeof value !== 'number' || isNaN(value)) return '$0.0000';
-    return '$' + value.toFixed(decimals);
+function formatCurrency(value, decimals = 0) {
+    if (typeof value !== 'number' || isNaN(value)) return '$0';
+    return '$' + Math.round(value).toLocaleString();
 }
 
 /**

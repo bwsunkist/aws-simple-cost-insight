@@ -282,12 +282,12 @@ function createServiceCompositionConfig(data, accountFilter = 'all') {
     }
 
     let serviceData = data.serviceAggregation;
-    let titleText = 'サービス別構成比（全アカウント）';
+    let titleText = 'サービス別構成比（全アカウント・最新月）';
 
     // Filter by specific account if requested
     if (accountFilter !== 'all') {
         // This would need account-specific data - for now use aggregated
-        titleText = `サービス別構成比（${accountFilter}）`;
+        titleText = `サービス別構成比（${accountFilter}・最新月）`;
     }
 
     // Filter out invalid values and ensure numeric values

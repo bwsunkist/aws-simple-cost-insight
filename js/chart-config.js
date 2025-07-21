@@ -70,7 +70,13 @@ const CHART_DEFAULTS = {
                 label: function(context) {
                     const label = context.dataset.label || '';
                     const value = context.parsed.y || context.parsed;
-                    return `${label}: $${Math.round(value).toLocaleString()}`;
+                    
+                    // Handle invalid values in tooltip
+                    if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
+                        return `${label}: $0`;
+                    }
+                    
+                    return `${label}: $${Math.round(Math.max(0, value)).toLocaleString()}`;
                 }
             }
         }
@@ -96,7 +102,11 @@ const CHART_DEFAULTS = {
                     size: 11
                 },
                 callback: function(value) {
-                    return '$' + Math.round(value);
+                    // Handle invalid values in tick formatting
+                    if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
+                        return '$0';
+                    }
+                    return '$' + Math.round(Math.max(0, value)).toLocaleString();
                 }
             }
         }
@@ -203,8 +213,21 @@ function createServiceComparisonConfig(data, period = 'latest') {
         return createEmptyChartConfig('サービスデータがありません');
     }
 
-    const services = Object.keys(data.serviceAggregation);
-    const values = Object.values(data.serviceAggregation);
+    // Filter out invalid values and ensure numeric values
+    const validServiceData = {};
+    Object.entries(data.serviceAggregation).forEach(([service, value]) => {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue) && isFinite(numValue)) {
+            validServiceData[service] = Math.max(0, numValue); // Ensure non-negative
+        }
+    });
+
+    if (Object.keys(validServiceData).length === 0) {
+        return createEmptyChartConfig('有効なサービスデータがありません');
+    }
+
+    const services = Object.keys(validServiceData);
+    const values = Object.values(validServiceData);
 
     const datasets = [{
         label: period === 'latest' ? '最新月のコスト' : '全期間合計コスト',
@@ -267,18 +290,39 @@ function createServiceCompositionConfig(data, accountFilter = 'all') {
         titleText = `サービス別構成比（${accountFilter}）`;
     }
 
-    const services = Object.keys(serviceData);
-    const values = Object.values(serviceData);
+    // Filter out invalid values and ensure numeric values
+    const validServiceData = {};
+    Object.entries(serviceData).forEach(([service, value]) => {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue) && isFinite(numValue) && numValue > 0) {
+            validServiceData[service] = numValue;
+        }
+    });
+
+    if (Object.keys(validServiceData).length === 0) {
+        return createEmptyChartConfig('有効なサービスデータがありません');
+    }
+
+    const services = Object.keys(validServiceData);
+    const values = Object.values(validServiceData);
     const total = values.reduce((sum, value) => sum + value, 0);
 
-    // Filter out zero values and calculate percentages
+    if (total <= 0) {
+        return createEmptyChartConfig('合計コストが0です');
+    }
+
+    // Calculate percentages with proper validation
     const filteredData = services
-        .map((service, index) => ({
-            service,
-            value: values[index],
-            percentage: (values[index] / total) * 100
-        }))
-        .filter(item => item.value > 0)
+        .map((service, index) => {
+            const value = values[index];
+            const percentage = (value / total) * 100;
+            return {
+                service,
+                value,
+                percentage: isFinite(percentage) ? percentage : 0
+            };
+        })
+        .filter(item => item.value > 0 && isFinite(item.percentage))
         .sort((a, b) => b.value - a.value);
 
     return {
@@ -393,8 +437,14 @@ function destroyChart(chartInstance) {
  * @returns {string} Formatted currency string
  */
 function formatCurrency(value, decimals = 0) {
-    if (typeof value !== 'number' || isNaN(value)) return '$0';
-    return '$' + Math.round(value).toLocaleString();
+    // Handle invalid values
+    if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
+        return '$0';
+    }
+    
+    // Ensure non-negative value
+    const safeValue = Math.max(0, value);
+    return '$' + Math.round(safeValue).toLocaleString();
 }
 
 /**

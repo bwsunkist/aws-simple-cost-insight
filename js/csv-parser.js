@@ -234,11 +234,17 @@ function aggregateMultiAccountData(accountsData) {
         return monthData;
     });
 
-    // Aggregate by service
+    // Aggregate by service with proper validation
     const serviceAggregation = {};
     sortedServices.forEach(service => {
         serviceAggregation[service] = accountsData.reduce((total, account) => {
-            return total + (account.summary[service] || 0);
+            const serviceValue = account.summary[service];
+            const numValue = parseFloat(serviceValue);
+            // Only add valid, finite numbers
+            if (!isNaN(numValue) && isFinite(numValue)) {
+                return total + Math.max(0, numValue); // Ensure non-negative
+            }
+            return total;
         }, 0);
     });
 

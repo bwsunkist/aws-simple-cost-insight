@@ -342,7 +342,6 @@ function updateAccountsList() {
                 </div>
             </div>
             <div class="account-actions">
-                <button class="view-btn" onclick="viewAccountDetails(${index})">詳細</button>
                 <button class="remove-btn" onclick="removeAccount(${index})">削除</button>
             </div>
         </div>
@@ -755,15 +754,6 @@ function updateStackedAccountOptions() {
     elements.stackedAccount.innerHTML = options.join('');
 }
 
-/**
- * View account details (placeholder)
- */
-function viewAccountDetails(index) {
-    const account = registeredAccounts[index];
-    if (account) {
-        alert(`アカウント詳細: ${account.name}\nファイル: ${account.fileName}\n総コスト: ${formatCurrency(account.data.totalCost)}\n期間: ${account.data.dataRange.monthCount}ヶ月`);
-    }
-}
 
 /**
  * Remove account
@@ -1121,5 +1111,4 @@ function updatePeriodComparisonChart(comparisonData) {
 }
 
 // Make functions available globally for inline event handlers
-window.viewAccountDetails = viewAccountDetails;
 window.removeAccount = removeAccount;

@@ -1,0 +1,16 @@
+slash-commands:
+  workflow:
+    description: "Execute comprehensive development workflow for feature completion"
+    allowed-tools:
+      - Read
+      - Edit  
+      - Write
+      - Glob
+      - Grep
+      - Bash(git:*, npm:test, npm:run)
+      - TodoWrite
+      - mcp__playwright__browser_navigate
+      - mcp__playwright__browser_click
+      - mcp__playwright__browser_type
+      - mcp__playwright__browser_snapshot
+      - mcp__playwright__browser_close

@@ -311,6 +311,26 @@ test('test name', async ({ browser }) => {
 - **必須実行**: 全ての機能追加・修正時
 - **実行順序**: 上記1-6の順序で必ず実行
 - **品質ゲート**: 各ステップ完了確認後に次ステップ進行
+
+## カスタムスラッシュコマンド
+### `/workflow` - 包括的開発ワークフロー自動実行
+上記の包括的開発ワークフローを自動実行するカスタムコマンド
+
+#### 設定場所
+- **コマンド定義**: `.claude/slash-commands/workflow.md`
+- **設定ファイル**: `.claude/config.yaml`
+
+#### 利用可能ツール
+```yaml
+allowed-tools:
+  - Read, Edit, Write, Glob, Grep
+  - Bash(git:*, npm:test, npm:run)
+  - TodoWrite
+  - mcp__playwright__browser_* (E2E検証用)
+```
+
+#### 使用方法
+Claude Code で `/workflow` と入力するだけで8ステップの包括的ワークフローが自動実行される
 - **例外処理**: Issue発見時は即座にISSUES.md記録・修正対応
 
 ### 品質保証

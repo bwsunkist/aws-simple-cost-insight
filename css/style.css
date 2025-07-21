@@ -587,6 +587,19 @@ section h2 {
     cursor: pointer;
 }
 
+/* Full width chart containers */
+.chart-container.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Account comparison chart wrapper */
+.chart-wrapper {
+    position: relative;
+    height: 400px;
+    width: 100%;
+    margin-top: 1rem;
+}
+
 .chart-controls label span {
     font-weight: 500;
     color: #4a5568;

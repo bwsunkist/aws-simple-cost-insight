@@ -954,6 +954,214 @@ function getCompositionColors(data, topServicesCount) {
     return colors;
 }
 
+/**
+ * Create 100% stacked bar chart configuration for account comparison
+ * @param {Object} data - Aggregated multi-account data
+ * @param {number} topServicesCount - Number of top services to show individually (1-10)
+ * @returns {Object} Chart configuration for 100% stacked bar chart
+ */
+function createAccountComparisonChartConfig(data, topServicesCount = 5) {
+    if (!data || !data.accounts || data.accounts.length === 0) {
+        return createEmptyChartConfig('アカウントデータがありません');
+    }
+
+    // Collect all services across all accounts
+    const allServices = new Set();
+    const accountsData = [];
+
+    // Process each account
+    data.accounts.forEach(account => {
+        const accountServiceData = getAccountServiceData(account.name, data);
+        
+        if (!accountServiceData || Object.keys(accountServiceData).length === 0) {
+            return; // Skip accounts with no data
+        }
+
+        // Filter out invalid values
+        const validServiceData = {};
+        Object.entries(accountServiceData).forEach(([service, value]) => {
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue) && isFinite(numValue) && numValue > 0) {
+                validServiceData[service] = numValue;
+                allServices.add(service);
+            }
+        });
+
+        if (Object.keys(validServiceData).length > 0) {
+            accountsData.push({
+                account: account.name,
+                services: validServiceData
+            });
+        }
+    });
+
+    if (accountsData.length === 0) {
+        return createEmptyChartConfig('有効なデータがありません');
+    }
+
+    // Determine top services across all accounts
+    const serviceTotals = {};
+    allServices.forEach(service => {
+        serviceTotals[service] = accountsData.reduce((sum, account) => {
+            return sum + (account.services[service] || 0);
+        }, 0);
+    });
+
+    // Sort services by total value and get top N
+    const sortedServices = Object.entries(serviceTotals)
+        .sort(([,a], [,b]) => b - a)
+        .map(([service]) => service);
+    
+    const topServices = sortedServices.slice(0, topServicesCount);
+    const otherServices = sortedServices.slice(topServicesCount);
+
+    // Create datasets for each service
+    const datasets = [];
+    const colors = generateColors(topServices.length + (otherServices.length > 0 ? 1 : 0));
+
+    // Add datasets for top services
+    topServices.forEach((service, index) => {
+        const serviceData = accountsData.map(account => {
+            const total = Object.values(account.services).reduce((sum, val) => sum + val, 0);
+            const serviceValue = account.services[service] || 0;
+            return total > 0 ? (serviceValue / total) * 100 : 0;
+        });
+
+        datasets.push({
+            label: service,
+            data: serviceData,
+            backgroundColor: colors[index],
+            borderColor: colors[index],
+            borderWidth: 1
+        });
+    });
+
+    // Add dataset for "その他" if there are other services
+    if (otherServices.length > 0) {
+        const othersData = accountsData.map(account => {
+            const total = Object.values(account.services).reduce((sum, val) => sum + val, 0);
+            const othersValue = otherServices.reduce((sum, service) => {
+                return sum + (account.services[service] || 0);
+            }, 0);
+            return total > 0 ? (othersValue / total) * 100 : 0;
+        });
+
+        datasets.push({
+            label: 'その他',
+            data: othersData,
+            backgroundColor: '#9CA3AF',
+            borderColor: '#9CA3AF',
+            borderWidth: 1
+        });
+    }
+
+    return {
+        type: 'bar',
+        data: {
+            labels: accountsData.map(account => account.account),
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'x',
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'アカウント',
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        display: true,
+                        color: '#f1f5f9'
+                    },
+                    title: {
+                        display: true,
+                        text: '構成比 (%)',
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            return `${label}: ${value.toFixed(1)}%`;
+                        }
+                    }
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            }
+        }
+    };
+}
+
+/**
+ * Get service data for a specific account
+ * @param {string} accountName - Account name
+ * @param {Object} data - Aggregated data
+ * @returns {Object} Service cost data for the account
+ */
+function getAccountServiceData(accountName, data) {
+    // Find the account in registered accounts
+    const account = registeredAccounts.find(acc => acc.name === accountName);
+    if (!account || !account.data.monthlyData || account.data.monthlyData.length === 0) {
+        return {};
+    }
+    
+    // Get the latest month's data (assuming monthlyData is sorted chronologically)
+    const latestMonthData = account.data.monthlyData[account.data.monthlyData.length - 1];
+    if (!latestMonthData) {
+        return {};
+    }
+    
+    // Convert month data to service data format
+    const serviceData = {};
+    Object.entries(latestMonthData).forEach(([key, value]) => {
+        if (key !== 'date' && key !== 'totalCost' && typeof value === 'number' && value > 0) {
+            serviceData[key] = value;
+        }
+    });
+    
+    return serviceData;
+}
+
 // Export functions for module use and testing
 if (typeof module !== 'undefined' && module.exports) {
     // Node.js environment (for testing)
@@ -971,6 +1179,8 @@ if (typeof module !== 'undefined' && module.exports) {
         updateChart,
         destroyChart,
         formatCurrency,
-        generateColors
+        generateColors,
+        createAccountComparisonChartConfigs,
+        getAccountServiceData
     };
 }

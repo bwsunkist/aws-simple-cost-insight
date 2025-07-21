@@ -1431,4 +1431,113 @@ datasets.push({
 ### Git操作
 - コミットハッシュ: 7b25d78
 - コミットメッセージ: "Improve monthly trend chart to show all accounts and total together"
+
+## 2025-07-21 UX改善: チャート表示順序とサービス別構成比機能拡張
+
+### 概要
+ユーザーの認知フローに基づいたチャート表示順序の改善と、サービス別構成比への上位サービス選択機能・「その他」グループ化機能の追加。情報設計とユーザビリティの大幅向上を実現。
+
+### 実施内容
+
+#### 1. チャート表示順序の改善
+**情報設計の最適化**:
+```
+改善前: 月次推移 → サービス別比較 → 構成比 → 積み上げ → 前月比
+改善後: 月次推移 → 前月比 → 構成比 → サービス別比較 → 積み上げ
+```
+
+**ユーザー認知フローとの整合**:
+1. **全体傾向把握** → 月次コスト推移
+2. **変化の早期発見** → 前月比増減率  
+3. **要因特定** → サービス別構成比
+4. **詳細金額確認** → サービス別コスト比較
+5. **深掘り分析** → 月次サービス別積み上げ
+
+#### 2. 前月比増減率への全体合計追加
+**`calculateTotalGrowthRates`関数新規実装 (`js/csv-parser.js`)**:
+```javascript
+function calculateTotalGrowthRates(monthlyTrends) {
+    // 全体の月次推移データから前月比を計算
+    const monthOverMonth = previous.totalCost > 0 
+        ? ((latest.totalCost - previous.totalCost) / previous.totalCost) * 100
+        : 0;
+    return { monthOverMonth, totalGrowth, trend, latestCost, previousCost };
+}
+```
+
+**テーブル表示更新 (`js/app.js`)**:
+- アカウント別データに加えて全体合計行を追加
+- 青色背景・太字での視覚的区別
+- 包括的な変化把握の実現
+
+#### 3. サービス別構成比タイトルの期間明記
+**明確な情報提供**:
+- HTML: `<h3>サービス別構成比（最新月）</h3>`
+- Chart.js: `'サービス別構成比（全アカウント・最新月）'`
+- ユーザーの混乱防止と透明性向上
+
+#### 4. サービス別構成比への上位サービス選択機能
+**UI拡張 (`index.html`)**:
+```html
+<label>
+    <span>表示サービス数:</span>
+    <select id="compositionTopServicesCount">
+        <option value="3">上位3サービス</option>
+        <option value="5" selected>上位5サービス</option>
+        <option value="7">上位7サービス</option>
+        <option value="10">上位10サービス</option>
+    </select>
+</label>
+```
+
+**「その他」グループ化ロジック (`js/chart-config.js`)**:
+```javascript
+// 上位N個のサービス選択とその他グループ化
+const topServices = allServiceData.slice(0, topServicesCount);
+const otherServices = allServiceData.slice(topServicesCount);
+if (otherServices.length > 0) {
+    filteredData.push({
+        service: 'その他',
+        value: othersTotal,
+        percentage: othersPercentage
+    });
+}
+```
+
+**色配色の特別処理 (`getCompositionColors`関数)**:
+- 上位サービス: 通常の色配色
+- 「その他」: グレー色(`#d1d5db`)で明確に区別
+
+#### 5. USER_MANUAL.md更新
+**新機能の操作手順記載**:
+- 表示サービス数選択の詳細説明
+- 「その他」機能の説明と活用方法
+- 一貫したUI操作の説明
+
+### 技術的決定事項
+- **情報設計優先**: ユーザーの自然な認知プロセスに合わせた順序設計
+- **UI一貫性**: 積み上げグラフと同じ表示数制御の採用
+- **視認性向上**: 色重複なし、「その他」の明確な区別
+- **データ透明性**: 期間明記による情報の明確化
+
+### 変更ファイル
+- `index.html`: チャート順序変更、構成比コントロール追加、タイトル更新
+- `js/app.js`: イベント処理追加、表示順序変更、全体合計対応
+- `js/chart-config.js`: 構成比「その他」機能、色配色、タイトル更新
+- `js/csv-parser.js`: 全体合計増減率計算関数追加
+- `css/style.css`: 全体合計行スタイル追加
+- `USER_MANUAL.md`: 新機能操作手順更新
+
+### E2E検証結果
+- チャート表示順序: ユーザー認知フローに沿った自然な情報提示確認
+- 前月比全体合計: 個別・全体両方の視点での変化把握確認
+- 構成比「その他」機能: 上位3サービス選択で正常なグループ化確認
+- 期間明記: 最新月データの明確な表示確認
+- レスポンシブ対応: 各画面サイズでの適切な表示確認
+
+### Git操作
+- `b8d95ba`: チャート表示順序改善
+- `bfac8a7`: 前月比全体合計追加
+- `3fddf3c`: 構成比タイトル期間明記
+- `b429a6a`: 構成比「その他」機能追加
 - ✅ 横長変形の解消

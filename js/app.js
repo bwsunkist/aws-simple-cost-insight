@@ -95,7 +95,11 @@ function cacheElements() {
         stackedAccount: document.getElementById('stackedAccount'),
         topServicesCount: document.getElementById('topServicesCount'),
         serviceStackedChart: document.getElementById('serviceStackedChart'),
-        growthRateTable: document.getElementById('growthRateTable')
+        growthRateTable: document.getElementById('growthRateTable'),
+        
+        // Account comparison chart
+        accountComparisonTopServicesCount: document.getElementById('accountComparisonTopServicesCount'),
+        accountComparisonChart: document.getElementById('accountComparisonChart')
     };
 }
 
@@ -132,6 +136,11 @@ function setupEventListeners() {
     
     if (elements.topServicesCount) {
         elements.topServicesCount.addEventListener('change', handleTopServicesCountChange);
+    }
+    
+    // Account comparison charts
+    if (elements.accountComparisonTopServicesCount) {
+        elements.accountComparisonTopServicesCount.addEventListener('change', handleAccountComparisonTopServicesCountChange);
     }
     
     // Threshold setting
@@ -405,7 +414,14 @@ function displayCharts() {
     if (!aggregatedData) return;
     
     // Destroy existing charts
-    Object.values(chartInstances).forEach(chart => destroyChart(chart));
+    Object.values(chartInstances).forEach(chart => {
+        if (Array.isArray(chart)) {
+            // Handle array of charts (like account comparison)
+            chart.forEach(c => destroyChart(c));
+        } else {
+            destroyChart(chart);
+        }
+    });
     chartInstances = {};
     
     // Create monthly trend chart
@@ -432,6 +448,9 @@ function displayCharts() {
     // Update account options
     updateCompositionAccountOptions();
     updateStackedAccountOptions();
+    
+    // Create account comparison charts
+    displayAccountComparisonChart();
 }
 
 /**
@@ -772,6 +791,42 @@ function updateStackedAccountOptions() {
     elements.stackedAccount.innerHTML = options.join('');
 }
 
+/**
+ * Display account comparison charts
+ */
+function displayAccountComparisonChart() {
+    if (!aggregatedData || !elements.accountComparisonChart) return;
+    
+    const topServicesCount = parseInt(elements.accountComparisonTopServicesCount?.value || 5);
+    
+    // Clear existing chart
+    if (chartInstances.accountComparison) {
+        destroyChart(chartInstances.accountComparison);
+        chartInstances.accountComparison = null;
+    }
+    
+    const chartConfig = createAccountComparisonChartConfig(aggregatedData, topServicesCount);
+    
+    if (!chartConfig || chartConfig.type === 'empty') {
+        return;
+    }
+    
+    // Create Chart instance
+    chartInstances.accountComparison = new Chart(elements.accountComparisonChart, chartConfig);
+}
+
+/**
+ * Destroy account comparison charts
+ */
+
+/**
+ * Handle account comparison top services count change
+ */
+function handleAccountComparisonTopServicesCountChange() {
+    if (!aggregatedData) return;
+    
+    displayAccountComparisonChart();
+}
 
 /**
  * Remove account

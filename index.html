@@ -186,6 +186,25 @@
                         <canvas id="serviceCompositionChart"></canvas>
                     </div>
 
+                    <!-- アカウント間構成比比較 -->
+                    <div class="chart-container full-width">
+                        <h3>アカウント間構成比比較（最新月）- 100%積み上げ棒グラフ</h3>
+                        <div class="chart-controls">
+                            <label>
+                                <span>表示サービス数:</span>
+                                <select id="accountComparisonTopServicesCount">
+                                    <option value="3">上位3サービス</option>
+                                    <option value="5" selected>上位5サービス</option>
+                                    <option value="7">上位7サービス</option>
+                                    <option value="10">上位10サービス</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="accountComparisonChart"></canvas>
+                        </div>
+                    </div>
+
                     <!-- サービス別コスト比較 -->
                     <div class="chart-container">
                         <h3>サービス別コスト比較</h3>

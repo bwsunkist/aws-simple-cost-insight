@@ -270,124 +270,6 @@ function createServiceComparisonConfig(data, period = 'latest') {
     };
 }
 
-/**
- * Create pie chart configuration for service composition
- * @param {Object} data - Aggregated multi-account data
- * @param {string} accountFilter - 'all' or specific account name
- * @param {number} topServicesCount - Number of top services to show individually (1-10)
- * @returns {Object} Chart.js configuration
- */
-function createServiceCompositionConfig(data, accountFilter = 'all', topServicesCount = 5) {
-    if (!data || !data.serviceAggregation) {
-        return createEmptyChartConfig('構成比データがありません');
-    }
-
-    let serviceData = data.serviceAggregation;
-    let titleText = 'サービス別構成比（全アカウント・最新月）';
-
-    // Filter by specific account if requested
-    if (accountFilter !== 'all') {
-        // This would need account-specific data - for now use aggregated
-        titleText = `サービス別構成比（${accountFilter}・最新月）`;
-    }
-
-    // Filter out invalid values and ensure numeric values
-    const validServiceData = {};
-    Object.entries(serviceData).forEach(([service, value]) => {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue) && isFinite(numValue) && numValue > 0) {
-            validServiceData[service] = numValue;
-        }
-    });
-
-    if (Object.keys(validServiceData).length === 0) {
-        return createEmptyChartConfig('有効なサービスデータがありません');
-    }
-
-    const services = Object.keys(validServiceData);
-    const values = Object.values(validServiceData);
-    const total = values.reduce((sum, value) => sum + value, 0);
-
-    if (total <= 0) {
-        return createEmptyChartConfig('合計コストが0です');
-    }
-
-    // Calculate percentages with proper validation and sort by value
-    const allServiceData = services
-        .map((service, index) => {
-            const value = values[index];
-            const percentage = (value / total) * 100;
-            return {
-                service,
-                value,
-                percentage: isFinite(percentage) ? percentage : 0
-            };
-        })
-        .filter(item => item.value > 0 && isFinite(item.percentage))
-        .sort((a, b) => b.value - a.value);
-
-    // Get top N services and group others
-    const topServices = allServiceData.slice(0, topServicesCount);
-    const otherServices = allServiceData.slice(topServicesCount);
-    
-    let filteredData = [...topServices];
-    
-    // Add "その他" if there are services to group
-    if (otherServices.length > 0) {
-        const othersTotal = otherServices.reduce((sum, item) => sum + item.value, 0);
-        const othersPercentage = (othersTotal / total) * 100;
-        
-        filteredData.push({
-            service: 'その他',
-            value: othersTotal,
-            percentage: othersPercentage
-        });
-    }
-
-    return {
-        type: 'pie',
-        data: {
-            labels: filteredData.map(item => `${item.service} (${item.percentage.toFixed(1)}%)`),
-            datasets: [{
-                data: filteredData.map(item => item.value),
-                backgroundColor: getCompositionColors(filteredData, topServicesCount),
-                borderColor: '#fff',
-                borderWidth: 2,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 15,
-                        font: { size: 11 }
-                    }
-                },
-                title: {
-                    display: true,
-                    text: titleText,
-                    font: { size: 14, weight: 'bold' }
-                },
-                tooltip: {
-                    ...CHART_DEFAULTS.plugins.tooltip,
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.parsed;
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: $${Math.round(value).toLocaleString()} (${percentage}%)`;
-                        }
-                    }
-                }
-            }
-        }
-    };
-}
 
 /**
  * Create empty chart configuration for error states
@@ -1055,10 +937,65 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
         });
     }
 
+    // Calculate total costs for each account
+    const accountTotals = accountsData.map(account => {
+        const total = Object.values(account.services).reduce((sum, val) => sum + val, 0);
+        return total;
+    });
+
+    // Calculate overall totals by service across all accounts
+    const overallServiceTotals = {};
+    accountsData.forEach(account => {
+        Object.entries(account.services).forEach(([service, value]) => {
+            overallServiceTotals[service] = (overallServiceTotals[service] || 0) + value;
+        });
+    });
+
+    // Sort services by overall total and get top N
+    const overallSortedServices = Object.entries(overallServiceTotals)
+        .sort(([,a], [,b]) => b - a)
+        .map(([service]) => service);
+    
+    const overallTopServices = overallSortedServices.slice(0, topServicesCount);
+    const overallOtherServices = overallSortedServices.slice(topServicesCount);
+
+    // Calculate overall total
+    const grandTotal = Object.values(overallServiceTotals).reduce((sum, val) => sum + val, 0);
+
+    // Add overall total data to datasets
+    overallTopServices.forEach((service, index) => {
+        if (datasets[index]) {
+            const serviceTotal = overallServiceTotals[service];
+            const overallPercentage = grandTotal > 0 ? (serviceTotal / grandTotal) * 100 : 0;
+            datasets[index].data.push(overallPercentage);
+        }
+    });
+
+    // Add others data if exists
+    if (overallOtherServices.length > 0 && datasets.length > overallTopServices.length) {
+        const othersTotal = overallOtherServices.reduce((sum, service) => {
+            return sum + (overallServiceTotals[service] || 0);
+        }, 0);
+        const othersPercentage = grandTotal > 0 ? (othersTotal / grandTotal) * 100 : 0;
+        datasets[datasets.length - 1].data.push(othersPercentage);
+    }
+
+    // Create labels array including overall total
+    const labels = [
+        ...accountsData.map((account, index) => {
+            const total = accountTotals[index];
+            return `${account.account}\n${formatCurrency(total)}`;
+        }),
+        `全体合計\n${formatCurrency(grandTotal)}`
+    ];
+
+    // Update accountTotals to include grand total for tooltip calculations
+    const allTotals = [...accountTotals, grandTotal];
+
     return {
         type: 'bar',
         data: {
-            labels: accountsData.map(account => account.account),
+            labels: labels,
             datasets: datasets
         },
         options: {
@@ -1116,10 +1053,26 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
                     mode: 'index',
                     intersect: false,
                     callbacks: {
+                        title: function(context) {
+                            const dataIndex = context[0].dataIndex;
+                            const total = allTotals[dataIndex];
+                            
+                            if (dataIndex >= accountsData.length) {
+                                // Overall total bar
+                                return `全体合計 (総額: ${formatCurrency(total)})`;
+                            } else {
+                                // Individual account bar
+                                const account = accountsData[dataIndex];
+                                return `${account.account} (総額: ${formatCurrency(total)})`;
+                            }
+                        },
                         label: function(context) {
                             const label = context.dataset.label || '';
-                            const value = context.parsed.y;
-                            return `${label}: ${value.toFixed(1)}%`;
+                            const percentage = context.parsed.y;
+                            const dataIndex = context.dataIndex;
+                            const total = allTotals[dataIndex];
+                            const actualValue = (percentage / 100) * total;
+                            return `${label}: ${percentage.toFixed(1)}% (${formatCurrency(actualValue)})`;
                         }
                     }
                 }
@@ -1171,7 +1124,6 @@ if (typeof module !== 'undefined' && module.exports) {
         initializeChartDefaults,
         createMonthlyTrendConfig,
         createServiceComparisonConfig,
-        createServiceCompositionConfig,
         createServiceStackedConfig,
         createReductionEffectChartConfig,
         createPeriodComparisonChartConfig,

@@ -67,7 +67,6 @@ function cacheElements() {
         chartsSection: document.getElementById('chartsSection'),
         monthlyTrendChart: document.getElementById('monthlyTrendChart'),
         serviceComparisonChart: document.getElementById('serviceComparisonChart'),
-        serviceCompositionChart: document.getElementById('serviceCompositionChart'),
         
         // Analysis section
         analysisSection: document.getElementById('analysisSection'),
@@ -90,8 +89,6 @@ function cacheElements() {
         
         // Chart controls
         serviceComparisonPeriod: document.getElementById('serviceComparisonPeriod'),
-        compositionAccount: document.getElementById('compositionAccount'),
-        compositionTopServicesCount: document.getElementById('compositionTopServicesCount'),
         stackedAccount: document.getElementById('stackedAccount'),
         topServicesCount: document.getElementById('topServicesCount'),
         serviceStackedChart: document.getElementById('serviceStackedChart'),
@@ -122,13 +119,6 @@ function setupEventListeners() {
         elements.serviceComparisonPeriod.addEventListener('change', handleServicePeriodChange);
     }
     
-    if (elements.compositionAccount) {
-        elements.compositionAccount.addEventListener('change', handleCompositionAccountChange);
-    }
-    
-    if (elements.compositionTopServicesCount) {
-        elements.compositionTopServicesCount.addEventListener('change', handleCompositionTopServicesCountChange);
-    }
     
     if (elements.stackedAccount) {
         elements.stackedAccount.addEventListener('change', handleStackedAccountChange);
@@ -433,11 +423,6 @@ function displayCharts() {
     const comparisonConfig = createServiceComparisonConfig(aggregatedData, comparisonPeriod);
     chartInstances.serviceComparison = new Chart(elements.serviceComparisonChart, comparisonConfig);
     
-    // Create service composition chart
-    const compositionAccount = elements.compositionAccount?.value || 'all';
-    const compositionTopServicesCount = parseInt(elements.compositionTopServicesCount?.value || 5);
-    const compositionConfig = createServiceCompositionConfig(aggregatedData, compositionAccount, compositionTopServicesCount);
-    chartInstances.serviceComposition = new Chart(elements.serviceCompositionChart, compositionConfig);
     
     // Create service stacked chart
     const stackedAccount = elements.stackedAccount?.value || 'all';
@@ -445,8 +430,6 @@ function displayCharts() {
     const stackedConfig = createServiceStackedConfig(aggregatedData, stackedAccount, topServicesCount);
     chartInstances.serviceStacked = new Chart(elements.serviceStackedChart, stackedConfig);
     
-    // Update account options
-    updateCompositionAccountOptions();
     updateStackedAccountOptions();
     
     // Create account comparison charts
@@ -763,19 +746,6 @@ function updateReductionEffectChart(reductionData) {
     }
 }
 
-/**
- * Update composition account select options
- */
-function updateCompositionAccountOptions() {
-    if (!elements.compositionAccount || !aggregatedData) return;
-    
-    const options = ['<option value="all">全アカウント</option>'];
-    registeredAccounts.forEach(account => {
-        options.push(`<option value="${escapeHtml(account.name)}">${escapeHtml(account.name)}</option>`);
-    });
-    
-    elements.compositionAccount.innerHTML = options.join('');
-}
 
 /**
  * Update stacked account select options

@@ -595,9 +595,19 @@ section h2 {
 /* Account comparison chart wrapper */
 .chart-wrapper {
     position: relative;
-    height: 400px;
+    height: 480px;
     width: 100%;
     margin-top: 1rem;
+}
+
+/* Account comparison chart specific styles */
+#accountComparisonChart {
+    font-family: inherit;
+}
+
+/* Improve X-axis label readability for multi-line labels */
+.chart-container.full-width .chart-wrapper canvas {
+    padding-bottom: 20px;
 }
 
 .chart-controls label span {

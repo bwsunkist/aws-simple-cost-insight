@@ -881,21 +881,54 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
         return createEmptyChartConfig('有効なデータがありません');
     }
 
-    // Determine top services across all accounts
+    // New algorithm: Union of top services per account
+    // Step 1: Get top services from each account individually
+    const servicesPerAccount = Math.max(2, Math.ceil(topServicesCount / accountsData.length));
+    const importantServicesSet = new Set();
+    
+    accountsData.forEach(account => {
+        // Get top services for this account
+        const accountServices = Object.entries(account.services)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, servicesPerAccount)
+            .map(([service]) => service);
+        
+        // Add to important services set
+        accountServices.forEach(service => importantServicesSet.add(service));
+    });
+    
+    // Step 2: Calculate totals for important services only
     const serviceTotals = {};
-    allServices.forEach(service => {
+    importantServicesSet.forEach(service => {
         serviceTotals[service] = accountsData.reduce((sum, account) => {
             return sum + (account.services[service] || 0);
         }, 0);
     });
 
-    // Sort services by total value and get top N
-    const sortedServices = Object.entries(serviceTotals)
+    // Step 3: Sort important services by total value
+    const sortedImportantServices = Object.entries(serviceTotals)
         .sort(([,a], [,b]) => b - a)
         .map(([service]) => service);
     
-    const topServices = sortedServices.slice(0, topServicesCount);
-    const otherServices = sortedServices.slice(topServicesCount);
+    // Step 4: Select final top services and others
+    const topServices = sortedImportantServices.slice(0, topServicesCount);
+    const otherImportantServices = sortedImportantServices.slice(topServicesCount);
+    
+    // Step 5: Add remaining services that weren't in any account's top list
+    const remainingServices = [];
+    allServices.forEach(service => {
+        if (!importantServicesSet.has(service)) {
+            const total = accountsData.reduce((sum, account) => {
+                return sum + (account.services[service] || 0);
+            }, 0);
+            if (total > 0) {
+                remainingServices.push(service);
+            }
+        }
+    });
+    
+    // Combine other important services + remaining services for "Others"
+    const otherServices = [...otherImportantServices, ...remainingServices];
 
     // Create datasets for each service
     const datasets = [];
@@ -943,21 +976,31 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
         return total;
     });
 
-    // Calculate overall totals by service across all accounts
+    // Calculate overall totals using the same service selection as individual accounts
     const overallServiceTotals = {};
-    accountsData.forEach(account => {
-        Object.entries(account.services).forEach(([service, value]) => {
-            overallServiceTotals[service] = (overallServiceTotals[service] || 0) + value;
-        });
+    importantServicesSet.forEach(service => {
+        overallServiceTotals[service] = accountsData.reduce((sum, account) => {
+            return sum + (account.services[service] || 0);
+        }, 0);
+    });
+    
+    // Add remaining services to overall totals
+    allServices.forEach(service => {
+        if (!overallServiceTotals[service]) {
+            const total = accountsData.reduce((sum, account) => {
+                return sum + (account.services[service] || 0);
+            }, 0);
+            if (total > 0) {
+                overallServiceTotals[service] = total;
+            }
+        }
     });
 
-    // Sort services by overall total and get top N
-    const overallSortedServices = Object.entries(overallServiceTotals)
-        .sort(([,a], [,b]) => b - a)
-        .map(([service]) => service);
-    
-    const overallTopServices = overallSortedServices.slice(0, topServicesCount);
-    const overallOtherServices = overallSortedServices.slice(topServicesCount);
+    // Use the same top services as individual accounts for consistency
+    const overallTopServices = topServices;
+    const overallOtherServices = Object.keys(overallServiceTotals).filter(service => 
+        !topServices.includes(service)
+    );
 
     // Calculate overall total
     const grandTotal = Object.values(overallServiceTotals).reduce((sum, val) => sum + val, 0);

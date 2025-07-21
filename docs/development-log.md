@@ -1,5 +1,90 @@
 # 開発ログ
 
+## 2025-07-21 Bug修正: サービス別チャートのNaN表示問題解決
+
+### 概要
+サービス別コスト比較グラフで費用が$0のサービスやCSVの無効データでNaN表示が発生する問題を修正。数値検証の包括的強化により、安定したチャート表示を実現。
+
+### 問題の詳細
+- **症状**: サービス別比較チャートでNaN表示が発生
+- **原因**: 無効な数値（NaN、undefined、null、infinite）の未検証
+- **影響範囲**: サービス比較・構成比チャート、CSV集計処理
+
+### 修正内容
+
+#### 1. チャート設定関数の数値検証強化
+**`createServiceComparisonConfig`関数**:
+```javascript
+// 無効値フィルタリング追加
+const validServiceData = {};
+Object.entries(data.serviceAggregation).forEach(([service, value]) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && isFinite(numValue)) {
+        validServiceData[service] = Math.max(0, numValue);
+    }
+});
+```
+
+**`createServiceCompositionConfig`関数**:
+- 同様の数値検証ロジック実装
+- パーセンテージ計算でのNaN回避
+- 合計が0の場合のエラーハンドリング
+
+#### 2. CSV集計処理の改善
+**`aggregateMultiAccountData`関数**:
+```javascript
+serviceAggregation[service] = accountsData.reduce((total, account) => {
+    const serviceValue = account.summary[service];
+    const numValue = parseFloat(serviceValue);
+    if (!isNaN(numValue) && isFinite(numValue)) {
+        return total + Math.max(0, numValue);
+    }
+    return total;
+}, 0);
+```
+
+#### 3. Chart.js表示関数の堅牢性向上
+- **ツールチップ**: `isNaN()` + `isFinite()` チェック追加
+- **Y軸ティック**: 無効値を$0として表示
+- **`formatCurrency`**: NaN、infinite値の適切な処理
+
+### 技術的決定事項
+
+#### 数値検証戦略
+- **3段階検証**: `parseFloat()` → `isNaN()` → `isFinite()`
+- **負の値の処理**: `Math.max(0, value)` で非負を保証
+- **フォールバック**: 無効値は$0または除外
+
+#### エラーハンドリング設計
+- **graceful degradation**: 無効データでもクラッシュしない
+- **ユーザーフレンドリー**: 適切なエラーメッセージ表示
+- **データ保全**: 有効なデータのみ処理対象
+
+### 修正効果
+
+#### 問題解決
+- ✅ $0サービスでNaN表示なし
+- ✅ 無効CSVデータでクラッシュ回避
+- ✅ 全チャートで一貫した数値表示
+- ✅ 適切なフォールバック表示
+
+#### 品質向上
+- **データ堅牢性**: 不正データ耐性向上
+- **ユーザー体験**: エラー画面の回避
+- **保守性**: 統一された検証ロジック
+
+### 作成・更新ファイル
+- `js/chart-config.js` - チャート設定関数の数値検証強化
+- `js/csv-parser.js` - CSV集計処理の検証ロジック追加
+
+### Git操作履歴
+- コミットハッシュ: 0d33928
+- コミットメッセージ: "Fix NaN display issue for services with zero or invalid cost values"
+
+### 次期予定
+- 追加のエッジケーステスト実装
+- 数値検証ロジックの単体テスト追加
+
 ## 2025-07-21 カスタムスラッシュコマンド `/workflow` 実装
 
 ### 概要

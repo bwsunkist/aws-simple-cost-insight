@@ -1780,5 +1780,155 @@ tooltip: {
 ### Git操作履歴
 - 実装コミット: `2bce238` "Add account-specific service trend chart with total and service breakdown"
 
-### 次のステップ
-引き続き包括的開発ワークフローに従い、ドキュメント更新（development-log.md、task-progress.md、ISSUES.md）を完了し、開発プロセス完了報告を実施。
+---
+
+## 2025-07-22: アカウント別サービス推移チャート全アカウント表示対応・JavaScriptエラー修正完了
+
+### 概要
+ユーザー要望に応じてアカウント別サービス推移チャートをデフォルトで全アカウント表示するよう改善し、JavaScript構文エラーによるアプリケーション動作不能問題を緊急修正。統一されたUX提供と安定動作を実現。
+
+### 実施内容
+
+#### 1. 全アカウント表示対応実装
+**デフォルト動作変更**:
+- **変更前**: アカウント選択必須（単一アカウント表示のみ）
+- **変更後**: デフォルト「全アカウント」選択状態で統合表示
+
+**統合表示機能**:
+```javascript
+if (showAllAccounts) {
+    // Add account total lines first
+    data.accounts.forEach((account, index) => {
+        datasets.push({
+            label: `${account.name}`,
+            borderWidth: 3,  // 太い実線
+            pointRadius: 5
+        });
+    });
+    
+    // Add overall total line
+    datasets.push({
+        label: '全体合計',
+        borderWidth: 4,      // 最太破線
+        borderDash: [5, 5]
+    });
+    
+    // Add service trend lines
+    sortedServices.forEach((service, index) => {
+        datasets.push({
+            label: service,
+            borderWidth: 1.5,  // 細い線
+            pointRadius: 3
+        });
+    });
+}
+```
+
+#### 2. データ構造拡張
+**monthlyTrends強化**:
+```javascript
+const monthlyTrends = sortedDates.map(date => {
+    const monthData = { date, totalCost: 0, serviceBreakdown: {} };
+    
+    // Initialize service breakdown
+    sortedServices.forEach(service => {
+        monthData.serviceBreakdown[service] = 0;
+    });
+    
+    // Aggregate service costs across accounts for this month
+    Object.entries(monthRecord.services).forEach(([service, cost]) => {
+        monthData.serviceBreakdown[service] = (monthData.serviceBreakdown[service] || 0) + cost;
+    });
+});
+```
+
+#### 3. Critical JavaScript構文エラー修正
+**問題**: `chart-config.js:1331` 行で閉じ括弧不足
+- **症状**: `Unexpected end of input` → `initializeChartDefaults is not defined`
+- **影響**: アプリケーション完全停止、全UI機能無効化
+
+**修正内容**:
+```javascript
+// 修正前（エラー）
+borderDash: service === 'その他' ? [5, 5] : undefined
+});
+});
+
+// 修正後（正常）
+borderDash: service === 'その他' ? [5, 5] : undefined
+});
+});
+}  // ← 不足していた閉じ括弧を追加
+```
+
+#### 4. タイトル・UI要素更新
+**HTML要素変更**:
+- **タイトル**: 「アカウント別サービス推移 - 合計値＋サービス別詳細」→「アカウント別コスト推移 + 上位サービス別詳細」
+- **選択肢**: 「アカウントを選択」→「全アカウント」（デフォルト選択状態）
+
+**Chart.js動的タイトル**:
+```javascript
+title: {
+    text: showAllAccounts ? 
+        'アカウント別コスト推移 + 上位サービス別詳細' : 
+        `${accountName} アカウント - サービス別コスト推移`
+}
+```
+
+#### 5. ユーザーマニュアル更新
+**USER_MANUAL.md改訂**:
+- 全アカウントモード・単一アカウントモードの説明分離
+- デフォルト動作の明確化
+- 視覚的階層（太い実線・破線・細い線）の詳細説明
+
+### 技術的決定事項
+
+#### UX統一性向上
+- **月次コスト推移**: デフォルト全アカウント表示
+- **前月比増減率**: 全体合計含む表示
+- **アカウント間構成比**: 全体合計並列表示
+- **新チャート**: 同様にデフォルト全アカウント表示
+
+#### 視覚的階層設計
+- **Level 1**: アカウント合計線（太い実線・カラー別）
+- **Level 2**: 全体合計線（最太破線・青色）
+- **Level 3**: サービス別詳細（細い線・サービス色）
+- **Level 4**: その他サービス（細い破線・グレー）
+
+#### データ処理最適化
+- **serviceBreakdown追加**: 月次トレンドに全アカウント集約サービス別データ
+- **動的切替**: 全アカウント↔単一アカウント表示モード対応
+- **エラーハンドリング**: 無効データ・未選択時の適切な表示
+
+### E2E検証結果
+**Playwright検証完了**:
+- ✅ アプリケーション正常初期化（`AWS Cost Insight Tool initialized`ログ出力）
+- ✅ JavaScriptエラー完全解消（コンソールエラーなし）
+- ✅ アカウント追加ボタン動作復旧
+- ✅ アカウント名入力機能正常
+- ✅ 新チャートUI要素正常表示
+
+### 作成・更新ファイル
+- `index.html`: タイトル・デフォルト選択肢更新
+- `js/chart-config.js`: 全アカウント表示ロジック・構文エラー修正
+- `js/app.js`: デフォルト選択状態・オプション生成更新
+- `js/csv-parser.js`: serviceBreakdown データ構造拡張
+- `USER_MANUAL.md`: 全アカウント・単一アカウントモード説明更新
+
+### 機能完成度
+**アカウント別サービス推移チャート完成**:
+- ✅ デフォルト全アカウント統合表示
+- ✅ 単一アカウント詳細表示（選択時）
+- ✅ 4階層視覚的表現（アカウント→全体→サービス→その他）
+- ✅ 動的タイトル・適応的凡例順序制御
+- ✅ 高度ツールチップ（金額・構成比同時表示）
+
+### Git操作履歴
+- `b30c8de`: 全アカウント表示機能実装
+- `dbe8867`: JavaScript構文エラー修正
+- `b6c1641`: ユーザーマニュアル更新
+
+### プロジェクトへの影響
+- **UX統一性**: 全チャートでデフォルト全アカウント表示を実現
+- **安定性向上**: Critical JavaScript エラー解消による動作保証
+- **機能拡張性**: 新データ構造により今後のサービス別分析機能基盤確立

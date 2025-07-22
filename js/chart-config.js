@@ -911,6 +911,7 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
         .map(([service]) => service);
     
     // Step 4: Select final top services and others
+    // Fix: Ensure we show exactly topServicesCount services PLUS Others separately
     const topServices = sortedImportantServices.slice(0, topServicesCount);
     const otherImportantServices = sortedImportantServices.slice(topServicesCount);
     
@@ -932,7 +933,8 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
 
     // Create datasets for each service
     const datasets = [];
-    const colors = generateColors(topServices.length + (otherServices.length > 0 ? 1 : 0));
+    // Always allocate colors for topServicesCount + 1 (for Others), even if Others might be empty
+    const colors = generateColors(topServices.length + 1);
 
     // Add datasets for top services
     topServices.forEach((service, index) => {
@@ -951,24 +953,22 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
         });
     });
 
-    // Add dataset for "その他" if there are other services
-    if (otherServices.length > 0) {
-        const othersData = accountsData.map(account => {
-            const total = Object.values(account.services).reduce((sum, val) => sum + val, 0);
-            const othersValue = otherServices.reduce((sum, service) => {
-                return sum + (account.services[service] || 0);
-            }, 0);
-            return total > 0 ? (othersValue / total) * 100 : 0;
-        });
+    // Always add dataset for "その他", even if empty (to maintain UI consistency)
+    const othersData = accountsData.map(account => {
+        const total = Object.values(account.services).reduce((sum, val) => sum + val, 0);
+        const othersValue = otherServices.reduce((sum, service) => {
+            return sum + (account.services[service] || 0);
+        }, 0);
+        return total > 0 ? (othersValue / total) * 100 : 0;
+    });
 
-        datasets.push({
-            label: 'その他',
-            data: othersData,
-            backgroundColor: '#9CA3AF',
-            borderColor: '#9CA3AF',
-            borderWidth: 1
-        });
-    }
+    datasets.push({
+        label: 'その他',
+        data: othersData,
+        backgroundColor: '#9CA3AF',
+        borderColor: '#9CA3AF',
+        borderWidth: 1
+    });
 
     // Calculate total costs for each account
     const accountTotals = accountsData.map(account => {
@@ -1014,14 +1014,12 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
         }
     });
 
-    // Add others data if exists
-    if (overallOtherServices.length > 0 && datasets.length > overallTopServices.length) {
-        const othersTotal = overallOtherServices.reduce((sum, service) => {
-            return sum + (overallServiceTotals[service] || 0);
-        }, 0);
-        const othersPercentage = grandTotal > 0 ? (othersTotal / grandTotal) * 100 : 0;
-        datasets[datasets.length - 1].data.push(othersPercentage);
-    }
+    // Always add others data to maintain consistency (even if 0%)
+    const othersTotal = overallOtherServices.reduce((sum, service) => {
+        return sum + (overallServiceTotals[service] || 0);
+    }, 0);
+    const othersPercentage = grandTotal > 0 ? (othersTotal / grandTotal) * 100 : 0;
+    datasets[datasets.length - 1].data.push(othersPercentage);
 
     // Create labels array including overall total
     const labels = [

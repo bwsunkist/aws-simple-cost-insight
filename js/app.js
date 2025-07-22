@@ -459,7 +459,7 @@ function displayCharts() {
  * Display analysis results
  */
 function displayAnalysisResults() {
-    if (!aggregatedData) return;
+    if (!aggregatedData || !aggregatedData.serviceAggregation) return;
     
     // Unused services (zero cost)
     const unusedServices = Object.entries(aggregatedData.serviceAggregation)
@@ -616,7 +616,7 @@ function handleThresholdChange(event) {
  * Update low usage services display based on current threshold
  */
 function updateLowUsageServicesDisplay() {
-    if (!aggregatedData || !elements.lowUsageServices) return;
+    if (!aggregatedData || !aggregatedData.serviceAggregation || !elements.lowUsageServices) return;
     
     const threshold = parseFloat(elements.lowUsageThreshold?.value || 0.01);
     const lowUsageServices = Object.entries(aggregatedData.serviceAggregation)

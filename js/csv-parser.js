@@ -233,11 +233,13 @@ function aggregateMultiAccountData(accountsData) {
                 monthData.totalCost += monthRecord.totalCost;
                 
                 // Aggregate service costs across accounts for this month
-                Object.entries(monthRecord.services).forEach(([service, cost]) => {
-                    if (service !== '合計コスト') {
-                        monthData.serviceBreakdown[service] = (monthData.serviceBreakdown[service] || 0) + cost;
-                    }
-                });
+                if (monthRecord.services) {
+                    Object.entries(monthRecord.services).forEach(([service, cost]) => {
+                        if (service !== '合計コスト') {
+                            monthData.serviceBreakdown[service] = (monthData.serviceBreakdown[service] || 0) + cost;
+                        }
+                    });
+                }
             } else {
                 monthData[account.accountName] = 0;
             }

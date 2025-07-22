@@ -1625,4 +1625,160 @@ if (otherServices.length > 0) {
 - ✅ 設定変更時のリアルタイム更新確認
 
 ### Git操作履歴
-- 修正コミット予定: "Fix service count UI issue - show N services plus Others separately"
+- 修正コミット: `129b2af` "Fix service count UI issue - show N services plus Others separately"
+
+---
+
+## 2025-07-22: アカウント別サービス推移 - 合計値＋サービス別詳細機能実装完了
+
+### 概要
+ユーザー要望に基づき、アカウント毎の合計値推移と個別サービス推移を統合表示する線グラフ機能を新規実装。複数の視点から特定アカウントのコスト推移を詳細分析できる可視化機能を完成。
+
+### 実施内容
+
+#### 1. 新規チャート種別の設計・実装
+**チャート仕様**:
+- **主線**: アカウントの総コスト推移（太い青線、目立つ表示）
+- **副線**: 上位サービス別の個別コスト推移（細い線）
+- **破線**: 「その他」サービスの合計（残りサービスの集計）
+
+**Chart.js統合**:
+- `createAccountServiceTrendConfig`関数実装 (`js/chart-config.js`)
+- 混合線グラフによる視覚的階層の実現
+- 動的データ処理とサービス優先度ソート
+
+#### 2. UI制御機能の実装
+**HTML構造追加 (`index.html`)**:
+```html
+<div class="chart-container full-width">
+    <h3>アカウント別サービス推移 - 合計値＋サービス別詳細</h3>
+    <div class="chart-controls">
+        <label>
+            <span>対象アカウント:</span>
+            <select id="accountServiceTrendAccount">
+                <option value="">アカウントを選択</option>
+            </select>
+        </label>
+        <label>
+            <span>表示サービス数:</span>
+            <select id="accountServiceTrendTopCount">
+                <option value="3">上位3サービス</option>
+                <option value="5" selected>上位5サービス</option>
+                <option value="7">上位7サービス</option>
+                <option value="10">上位10サービス</option>
+            </select>
+        </label>
+    </div>
+</div>
+```
+
+**JavaScript制御 (`js/app.js`)**:
+- DOM要素キャッシュ: `accountServiceTrendAccount`, `accountServiceTrendTopCount`
+- イベント処理: アカウント選択・サービス数変更時のリアルタイム更新
+- チャート表示関数: `displayAccountServiceTrendChart()`
+- アカウント選択肢自動更新: `updateAccountServiceTrendOptions()`
+
+#### 3. データ処理・集約ロジック
+**サービス別データ集約**:
+- 月次データ横断でのサービス別総コスト算出
+- コスト順ソートによる上位サービス特定
+- 「その他」グループ化（残りサービスの自動集計）
+
+**視覚的階層の実現**:
+```javascript
+// アカウント合計線（目立つスタイル）
+datasets.push({
+    label: `${accountName} 合計`,
+    borderColor: totalColor,
+    borderWidth: 3,        // 太い線
+    pointRadius: 6,        // 大きなポイント
+    pointHoverRadius: 8
+});
+
+// 個別サービス線（控えめスタイル）
+datasets.push({
+    label: service,
+    borderColor: color,
+    borderWidth: 2,        // 細い線
+    pointRadius: 4,        // 小さなポイント
+    borderDash: service === 'その他' ? [5, 5] : undefined  // その他は破線
+});
+```
+
+#### 4. 高度なツールチップ機能
+**詳細情報表示**:
+- 各データポイントでの金額・構成比同時表示
+- アカウント合計に対する各サービスの割合計算
+- 複数データセットでの整理された情報提示
+
+**ツールチップ実装**:
+```javascript
+tooltip: {
+    callbacks: {
+        afterBody: function(context) {
+            // 構成比計算・表示ロジック
+            const totalValue = context.find(item => 
+                item.dataset.label.includes('合計')
+            )?.parsed.y || 0;
+            
+            return serviceValues.map(item => {
+                const percentage = ((item.parsed.y / totalValue) * 100).toFixed(1);
+                return `  ${item.dataset.label}: ${percentage}%`;
+            });
+        }
+    }
+}
+```
+
+#### 5. ユーザーマニュアル更新
+**USER_MANUAL.md拡張**:
+- 新機能の詳細操作手順
+- 活用例・利用シーンの具体的説明
+- ツールチップ機能の詳細解説
+- 凡例表示順序・視覚的階層の説明
+
+### 技術的決定事項
+
+#### Chart.js設計パターン
+- **データセット構成**: 合計線を最優先、サービス線を続行、「その他」を最後
+- **色管理**: アカウント色を合計に使用、サービス色配列で統一性確保
+- **視覚的区別**: 線の太さ・ポイントサイズ・破線パターンによる階層化
+
+#### 動的タイトル機能
+- **パターン**: `${accountName} アカウント - サービス別コスト推移`
+- **UI連動**: アカウント選択時の自動更新
+- **Chart.js統合**: プラグイン設定での動的テキスト生成
+
+#### データ処理最適化
+- **総コスト計算**: `Object.values().reduce()`による効率的集約
+- **サービス順序**: Map利用による重複回避・ソート処理
+- **エラーハンドリング**: アカウント未選択・データ不足時の適切な表示
+
+### E2E検証結果
+**Playwright自動検証**:
+- ✅ アカウント選択UI: ドロップダウン正常動作
+- ✅ サービス数制御: 5サービス選択時の適切な表示
+- ✅ チャート描画: 太い青線（合計）+ 細い線（サービス別）表示
+- ✅ 動的タイトル: 「dev-account アカウント - サービス別コスト推移」更新確認
+- ✅ 全width対応: full-widthクラスでの適切なレイアウト
+
+### 作成・更新ファイル
+- `index.html`: 新規チャートセクション・UI制御追加
+- `js/chart-config.js`: `createAccountServiceTrendConfig`関数実装
+- `js/app.js`: イベント処理・DOM管理・表示制御追加
+- `USER_MANUAL.md`: 新機能詳細説明・操作手順追加
+
+### 機能完成度
+**アカウント別サービス推移機能完成**:
+- ✅ アカウント選択UI（登録済みアカウントから選択）
+- ✅ 表示サービス数制御（3/5/7/10サービス選択）
+- ✅ 統合線グラフ（合計＋サービス別同時表示）
+- ✅ 視覚的階層（太線・細線・破線の使い分け）
+- ✅ 動的タイトル・ツールチップ（構成比表示）
+- ✅ 凡例順序制御（合計→サービス→その他の順序）
+
+### Git操作履歴
+- 実装コミット: `2bce238` "Add account-specific service trend chart with total and service breakdown"
+
+### 次のステップ
+引き続き包括的開発ワークフローに従い、ドキュメント更新（development-log.md、task-progress.md、ISSUES.md）を完了し、開発プロセス完了報告を実施。

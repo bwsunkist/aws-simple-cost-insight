@@ -1127,10 +1127,10 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
 }
 
 /**
- * Create line chart configuration for account-specific service trends
- * Shows total cost line plus individual service trends for a specific account
+ * Create line chart configuration for multi-account service trends
+ * Shows account totals plus top service trends across all accounts
  * @param {Object} data - Aggregated multi-account data
- * @param {string} accountName - Target account name
+ * @param {string} accountName - Target account name (if empty, shows all accounts)
  * @param {number} topServicesCount - Number of top services to show individually
  * @returns {Object} Chart configuration for line chart
  */
@@ -1138,15 +1138,16 @@ function createAccountServiceTrendConfig(data, accountName, topServicesCount = 5
     if (!data || !data.monthlyTrends || data.monthlyTrends.length === 0) {
         return createEmptyChartConfig('月次データがありません');
     }
-    
-    if (!accountName || accountName === '') {
-        return createEmptyChartConfig('アカウントを選択してください');
-    }
 
-    // Find the target account
-    const targetAccount = data.accounts.find(acc => acc.name === accountName);
-    if (!targetAccount) {
-        return createEmptyChartConfig(`アカウント「${accountName}」が見つかりません`);
+    // If no account specified, show all accounts + top services
+    const showAllAccounts = !accountName || accountName === '';
+    
+    if (!showAllAccounts) {
+        // Single account mode (existing functionality)
+        const targetAccount = data.accounts.find(acc => acc.name === accountName);
+        if (!targetAccount) {
+            return createEmptyChartConfig(`アカウント「${accountName}」が見つかりません`);
+        }
     }
 
     // Create monthly labels
@@ -1154,83 +1155,174 @@ function createAccountServiceTrendConfig(data, accountName, topServicesCount = 5
         new Date(trend.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
     );
 
-    // Get account service data for each month and determine top services
-    const accountServicesByMonth = data.monthlyTrends.map(trend => {
-        const monthData = getMonthDataForAccount(data, trend.date, accountName);
-        return monthData.services || {};
-    });
-
-    // Calculate total costs for each service across all months
-    const serviceMap = new Map();
-    accountServicesByMonth.forEach(monthServices => {
-        Object.entries(monthServices).forEach(([service, cost]) => {
-            if (service !== '合計コスト') {
-                const currentTotal = serviceMap.get(service) || 0;
-                serviceMap.set(service, currentTotal + cost);
-            }
-        });
-    });
-
-    // Get top services for this account
-    const sortedServices = Array.from(serviceMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, topServicesCount)
-        .map(entry => entry[0]);
-    
-    // Always add "その他" for remaining services
-    const otherServices = Array.from(serviceMap.keys()).filter(service => 
-        !sortedServices.includes(service)
-    );
-    if (otherServices.length > 0) {
-        sortedServices.push('その他');
-    }
-
-    // Generate colors - account total gets a distinct color, services get standard colors
-    const totalColor = CHART_COLORS.accounts[0]; // Use account color for total
-    const serviceColors = generateColors(sortedServices.length, 'services');
-    
     // Build datasets
     const datasets = [];
 
-    // Add account total line (prominent)
-    const totalData = data.monthlyTrends.map(trend => {
-        const monthData = getMonthDataForAccount(data, trend.date, accountName);
-        return Object.values(monthData.services || {})
-            .reduce((sum, cost) => sum + cost, 0);
-    });
-
-    datasets.push({
-        label: `${accountName} 合計`,
-        data: totalData,
-        borderColor: totalColor,
-        backgroundColor: totalColor + '20',
-        borderWidth: 3,
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        tension: 0.3,
-        fill: false
-    });
-
-    // Add individual service lines (thinner)
-    sortedServices.forEach((service, index) => {
-        const serviceData = accountServicesByMonth.map(monthServices => {
-            if (service === 'その他') {
-                // Calculate "others" total
-                return otherServices.reduce((sum, otherService) => {
-                    return sum + (monthServices[otherService] || 0);
-                }, 0);
-            } else {
-                return monthServices[service] || 0;
-            }
+    if (showAllAccounts) {
+        // All accounts mode: show all account totals + top services across all accounts
+        
+        // Add account total lines first
+        data.accounts.forEach((account, index) => {
+            const accountData = data.monthlyTrends.map(trend => trend[account.name] || 0);
+            const color = CHART_COLORS.accounts[index % CHART_COLORS.accounts.length];
+            
+            datasets.push({
+                label: `${account.name}`,
+                data: accountData,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                tension: 0.3,
+                fill: false
+            });
         });
 
-        const color = service === 'その他' ? '#9CA3AF' : serviceColors[index];
-        
+        // Add overall total line
+        const totalData = data.monthlyTrends.map(trend => trend.totalCost);
         datasets.push({
-            label: service,
-            data: serviceData,
-            borderColor: color,
-            backgroundColor: color + '20',
+            label: '全体合計',
+            data: totalData,
+            borderColor: CHART_COLORS.primary,
+            backgroundColor: CHART_COLORS.primary + '20',
+            borderWidth: 4,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            tension: 0.3,
+            fill: false,
+            borderDash: [5, 5]
+        });
+
+        // Calculate top services across all accounts
+        const serviceMap = new Map();
+        data.accounts.forEach(account => {
+            Object.entries(account.summary || {}).forEach(([service, cost]) => {
+                if (service !== '合計コスト') {
+                    const currentTotal = serviceMap.get(service) || 0;
+                    serviceMap.set(service, currentTotal + cost);
+                }
+            });
+        });
+
+        // Get top services
+        const sortedServices = Array.from(serviceMap.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, topServicesCount)
+            .map(entry => entry[0]);
+        
+        // Add "その他" for remaining services
+        const otherServices = Array.from(serviceMap.keys()).filter(service => 
+            !sortedServices.includes(service)
+        );
+        if (otherServices.length > 0) {
+            sortedServices.push('その他');
+        }
+
+        // Add service trend lines
+        const serviceColors = generateColors(sortedServices.length, 'services');
+        sortedServices.forEach((service, index) => {
+            const serviceData = data.monthlyTrends.map(trend => {
+                if (service === 'その他') {
+                    return otherServices.reduce((sum, otherService) => {
+                        return sum + (trend.serviceBreakdown?.[otherService] || 0);
+                    }, 0);
+                } else {
+                    return trend.serviceBreakdown?.[service] || 0;
+                }
+            });
+
+            const color = service === 'その他' ? '#9CA3AF' : serviceColors[index];
+            
+            datasets.push({
+                label: service,
+                data: serviceData,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 1.5,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                tension: 0.3,
+                fill: false,
+                borderDash: service === 'その他' ? [3, 3] : undefined
+            });
+        });
+
+    } else {
+        // Single account mode (existing functionality)
+        const accountServicesByMonth = data.monthlyTrends.map(trend => {
+            const monthData = getMonthDataForAccount(data, trend.date, accountName);
+            return monthData.services || {};
+        });
+
+        // Calculate total costs for each service across all months
+        const serviceMap = new Map();
+        accountServicesByMonth.forEach(monthServices => {
+            Object.entries(monthServices).forEach(([service, cost]) => {
+                if (service !== '合計コスト') {
+                    const currentTotal = serviceMap.get(service) || 0;
+                    serviceMap.set(service, currentTotal + cost);
+                }
+            });
+        });
+
+        // Get top services for this account
+        const sortedServices = Array.from(serviceMap.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, topServicesCount)
+            .map(entry => entry[0]);
+        
+        // Always add "その他" for remaining services
+        const otherServices = Array.from(serviceMap.keys()).filter(service => 
+            !sortedServices.includes(service)
+        );
+        if (otherServices.length > 0) {
+            sortedServices.push('その他');
+        }
+
+        // Generate colors - account total gets a distinct color, services get standard colors
+        const totalColor = CHART_COLORS.accounts[0]; // Use account color for total
+        const serviceColors = generateColors(sortedServices.length, 'services');
+
+        // Add account total line (prominent)
+        const totalData = data.monthlyTrends.map(trend => {
+            const monthData = getMonthDataForAccount(data, trend.date, accountName);
+            return Object.values(monthData.services || {})
+                .reduce((sum, cost) => sum + cost, 0);
+        });
+
+        datasets.push({
+            label: `${accountName} 合計`,
+            data: totalData,
+            borderColor: totalColor,
+            backgroundColor: totalColor + '20',
+            borderWidth: 3,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            tension: 0.3,
+            fill: false
+        });
+
+        // Add individual service lines (thinner)
+        sortedServices.forEach((service, index) => {
+            const serviceData = accountServicesByMonth.map(monthServices => {
+                if (service === 'その他') {
+                    // Calculate "others" total
+                    return otherServices.reduce((sum, otherService) => {
+                        return sum + (monthServices[otherService] || 0);
+                    }, 0);
+                } else {
+                    return monthServices[service] || 0;
+                }
+            });
+
+            const color = service === 'その他' ? '#9CA3AF' : serviceColors[index];
+            
+            datasets.push({
+                label: service,
+                data: serviceData,
+                borderColor: color,
+                backgroundColor: color + '20',
             borderWidth: 2,
             pointRadius: 4,
             pointHoverRadius: 6,
@@ -1256,7 +1348,9 @@ function createAccountServiceTrendConfig(data, accountName, topServicesCount = 5
             plugins: {
                 title: {
                     display: true,
-                    text: `${accountName} アカウント - サービス別コスト推移`,
+                    text: showAllAccounts ? 
+                        'アカウント別コスト推移 + 上位サービス別詳細' : 
+                        `${accountName} アカウント - サービス別コスト推移`,
                     font: { size: 14, weight: 'bold' }
                 },
                 legend: {

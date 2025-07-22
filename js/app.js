@@ -848,7 +848,7 @@ function displayAccountServiceTrendChart() {
 function updateAccountServiceTrendOptions() {
     if (!elements.accountServiceTrendAccount || !aggregatedData) return;
     
-    const options = ['<option value="">アカウントを選択</option>'];
+    const options = ['<option value="" selected>全アカウント</option>'];
     registeredAccounts.forEach(account => {
         options.push(`<option value="${escapeHtml(account.name)}">${escapeHtml(account.name)}</option>`);
     });

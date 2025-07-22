@@ -1331,6 +1331,7 @@ function createAccountServiceTrendConfig(data, accountName, topServicesCount = 5
             borderDash: service === 'その他' ? [5, 5] : undefined // Dashed line for "Others"
         });
     });
+    }
 
     return {
         type: 'line',

@@ -52,17 +52,6 @@ file:///[プロジェクトの絶対パス]/index.html
 - アカウント登録フォームが表示される
 - コンソール（F12）に「AWS Cost Insight Tool initialized」ログが出力される
 
-### 3. 【オプション】ローカルサーバー起動
-より本格的な環境で動作確認したい場合：
-```bash
-# Python 3.x の場合
-python -m http.server 8000
-
-# Node.js の場合
-npx serve .
-```
-その後 http://localhost:8000 にアクセス
-
 ---
 
 ## 📋 操作手順

@@ -11,6 +11,7 @@
 | #005 | データ分析開始機能が動作しない | High | Fixed | 2025-07-19 | 2025-07-19 |
 | #006 | Chart.jsでvalue.toFixedエラー | Medium | Open | 2025-07-19 | - |
 | #007 | Chart.js構文エラーによるアプリケーション停止 | Critical | Fixed | 2025-07-22 | 2025-07-22 |
+| #008 | データ分析でTypeError発生 | High | Fixed | 2025-07-22 | 2025-07-22 |
 
 ---
 
@@ -415,19 +416,67 @@ borderDash: service === 'その他' ? [5, 5] : undefined
 - アカウント追加ボタン: ✅ 動作復旧
 - 全UI機能: ✅ 正常動作確認
 
+### #008: データ分析でTypeError発生
+- **発見日**: 2025-07-22
+- **重要度**: High
+- **ステータス**: Fixed
+- **発見者**: ユーザー報告（データ分析開始ボタンクリック時）
+
+#### 症状
+- **発生画面**: データ分析開始処理
+- **期待動作**: 「データ分析開始」ボタンクリック後、全チャート・分析結果が正常表示
+- **実際動作**: `TypeError: Cannot convert undefined or null to object` エラーで分析処理失敗
+- **具体的なエラー**: `Object.entries()` にnull/undefinedが渡されてエラー
+
+#### 詳細なエラー情報
+```
+Error analyzing data: TypeError: Cannot convert undefined or null to object
+    at Object.entries (<anonymous>)
+    at file:///mnt/c/work/GitHub/aws-simple-cost-insight/js/csv-parser.js:236:24
+    at Array.forEach (<anonymous>)
+    at file:///mnt/c/work/GitHub/aws-simple-cost-insight/js/csv-parser.js:229:22
+```
+
+#### 再現手順
+1. アカウントを追加（CSVファイルアップロード）
+2. 「データ分析開始」ボタンクリック
+3. TypeErrorが発生し分析結果が表示されない
+4. ブラウザコンソールでエラーメッセージ確認
+
+#### 影響範囲
+- **Core機能**: データ分析機能が完全に無効
+- **UI**: 分析結果セクション・チャート表示が失敗
+- **ユーザー体験**: 主要機能が使用不可能
+
+#### 修正内容 (2025-07-22)
+- **根本原因**: 
+  - `csv-parser.js:236` - `monthRecord.services`がnull時のObject.entries()エラー
+  - `app.js` - `aggregatedData.serviceAggregation`未チェック
+- **修正内容**:
+  - `csv-parser.js`: `monthRecord.services`のnullチェック追加
+  - `app.js`: `displayAnalysisResults()`でnullチェック強化
+  - `app.js`: `updateLowUsageServicesDisplay()`でnullチェック追加
+- **検証結果**: データ分析機能完全復旧・全チャート正常表示
+
+#### E2E検証結果
+- データ分析開始: ✅ エラーなし
+- 全チャート表示: ✅ 正常（月次推移・サービス比較・構成比等）
+- 分析結果表示: ✅ 正常（未使用・高コスト・削減効果等）
+- コンソールエラー: ✅ 完全解消
+
 ---
 
 ## Issue統計
 
 ### ステータス別
-- **Open**: 2件
+- **Open**: 1件
 - **In Progress**: 0件
-- **Fixed**: 4件
+- **Fixed**: 6件
 - **Verified**: 0件
 
 ### 重要度別
 - **Critical**: 0件（1件→Fixed）
-- **High**: 6件（4件→Fixed, 2件Open）
+- **High**: 6件（5件→Fixed, 1件Open）
 - **Medium**: 0件
 - **Low**: 0件
 

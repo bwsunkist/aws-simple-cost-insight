@@ -1932,3 +1932,25 @@ title: {
 - **UX統一性**: 全チャートでデフォルト全アカウント表示を実現
 - **安定性向上**: Critical JavaScript エラー解消による動作保証
 - **機能拡張性**: 新データ構造により今後のサービス別分析機能基盤確立
+
+## 2025-07-22: データ分析機能TypeError修正
+
+### 実施内容
+- **Issue発見・対応**: ユーザー報告によるデータ分析時TypeError対応
+- **エラー調査**: Playwrightブラウザ検証によるエラー特定（Object.entriesにnull/undefined）
+- **包括的修正**: 3箇所のnullチェック追加による堅牢性向上
+- **動作確認**: データ分析機能完全復旧・全チャート正常表示
+
+### 技術的決定
+- **Nullチェック戦略**: Object.entries()呼び出し前の必須チェック実装
+- **エラーハンドリング**: 段階的チェック（aggregatedData → serviceAggregation → services）
+- **データ堅牢性**: CSV解析時の不完全データ対応強化
+
+### 修正ファイル
+- `js/app.js`: displayAnalysisResults, updateLowUsageServicesDisplayでnullチェック追加
+- `js/csv-parser.js`: monthRecord.servicesチェック追加（Object.entries前）
+
+### Git操作
+- **コミット**: `b7df6af` - TypeError修正・nullチェック包括対応
+
+最終更新: 2025-07-22

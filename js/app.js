@@ -96,7 +96,12 @@ function cacheElements() {
         
         // Account comparison chart
         accountComparisonTopServicesCount: document.getElementById('accountComparisonTopServicesCount'),
-        accountComparisonChart: document.getElementById('accountComparisonChart')
+        accountComparisonChart: document.getElementById('accountComparisonChart'),
+        
+        // Account service trend chart
+        accountServiceTrendAccount: document.getElementById('accountServiceTrendAccount'),
+        accountServiceTrendTopCount: document.getElementById('accountServiceTrendTopCount'),
+        accountServiceTrendChart: document.getElementById('accountServiceTrendChart')
     };
 }
 
@@ -131,6 +136,14 @@ function setupEventListeners() {
     // Account comparison charts
     if (elements.accountComparisonTopServicesCount) {
         elements.accountComparisonTopServicesCount.addEventListener('change', handleAccountComparisonTopServicesCountChange);
+    }
+    
+    // Account service trend chart
+    if (elements.accountServiceTrendAccount) {
+        elements.accountServiceTrendAccount.addEventListener('change', handleAccountServiceTrendAccountChange);
+    }
+    if (elements.accountServiceTrendTopCount) {
+        elements.accountServiceTrendTopCount.addEventListener('change', handleAccountServiceTrendTopCountChange);
     }
     
     // Threshold setting
@@ -434,6 +447,12 @@ function displayCharts() {
     
     // Create account comparison charts
     displayAccountComparisonChart();
+    
+    // Create account service trend chart
+    displayAccountServiceTrendChart();
+    
+    // Update account options for service trend chart
+    updateAccountServiceTrendOptions();
 }
 
 /**
@@ -796,6 +815,63 @@ function handleAccountComparisonTopServicesCountChange() {
     if (!aggregatedData) return;
     
     displayAccountComparisonChart();
+}
+
+/**
+ * Display account service trend chart
+ */
+function displayAccountServiceTrendChart() {
+    if (!aggregatedData || !elements.accountServiceTrendChart) return;
+    
+    const accountName = elements.accountServiceTrendAccount?.value || '';
+    const topServicesCount = parseInt(elements.accountServiceTrendTopCount?.value || 5);
+    
+    // Clear existing chart
+    if (chartInstances.accountServiceTrend) {
+        destroyChart(chartInstances.accountServiceTrend);
+        chartInstances.accountServiceTrend = null;
+    }
+    
+    const chartConfig = createAccountServiceTrendConfig(aggregatedData, accountName, topServicesCount);
+    
+    if (!chartConfig || chartConfig.type === 'empty') {
+        return;
+    }
+    
+    // Create Chart instance
+    chartInstances.accountServiceTrend = new Chart(elements.accountServiceTrendChart, chartConfig);
+}
+
+/**
+ * Update account options for service trend chart
+ */
+function updateAccountServiceTrendOptions() {
+    if (!elements.accountServiceTrendAccount || !aggregatedData) return;
+    
+    const options = ['<option value="">アカウントを選択</option>'];
+    registeredAccounts.forEach(account => {
+        options.push(`<option value="${escapeHtml(account.name)}">${escapeHtml(account.name)}</option>`);
+    });
+    
+    elements.accountServiceTrendAccount.innerHTML = options.join('');
+}
+
+/**
+ * Handle account service trend account change
+ */
+function handleAccountServiceTrendAccountChange() {
+    if (!aggregatedData) return;
+    
+    displayAccountServiceTrendChart();
+}
+
+/**
+ * Handle account service trend top services count change
+ */
+function handleAccountServiceTrendTopCountChange() {
+    if (!aggregatedData) return;
+    
+    displayAccountServiceTrendChart();
 }
 
 /**

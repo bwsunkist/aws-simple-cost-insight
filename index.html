@@ -217,6 +217,31 @@
                         </div>
                         <canvas id="serviceStackedChart"></canvas>
                     </div>
+
+                    <!-- アカウント別サービス推移グラフ -->
+                    <div class="chart-container full-width">
+                        <h3>アカウント別サービス推移 - 合計値＋サービス別詳細</h3>
+                        <div class="chart-controls">
+                            <label>
+                                <span>対象アカウント:</span>
+                                <select id="accountServiceTrendAccount">
+                                    <option value="">アカウントを選択</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>表示サービス数:</span>
+                                <select id="accountServiceTrendTopCount">
+                                    <option value="3">上位3サービス</option>
+                                    <option value="5" selected>上位5サービス</option>
+                                    <option value="7">上位7サービス</option>
+                                    <option value="10">上位10サービス</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="accountServiceTrendChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </section>
 

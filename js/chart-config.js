@@ -1127,6 +1127,218 @@ function createAccountComparisonChartConfig(data, topServicesCount = 5) {
 }
 
 /**
+ * Create line chart configuration for account-specific service trends
+ * Shows total cost line plus individual service trends for a specific account
+ * @param {Object} data - Aggregated multi-account data
+ * @param {string} accountName - Target account name
+ * @param {number} topServicesCount - Number of top services to show individually
+ * @returns {Object} Chart configuration for line chart
+ */
+function createAccountServiceTrendConfig(data, accountName, topServicesCount = 5) {
+    if (!data || !data.monthlyTrends || data.monthlyTrends.length === 0) {
+        return createEmptyChartConfig('月次データがありません');
+    }
+    
+    if (!accountName || accountName === '') {
+        return createEmptyChartConfig('アカウントを選択してください');
+    }
+
+    // Find the target account
+    const targetAccount = data.accounts.find(acc => acc.name === accountName);
+    if (!targetAccount) {
+        return createEmptyChartConfig(`アカウント「${accountName}」が見つかりません`);
+    }
+
+    // Create monthly labels
+    const labels = data.monthlyTrends.map(trend => 
+        new Date(trend.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+    );
+
+    // Get account service data for each month and determine top services
+    const accountServicesByMonth = data.monthlyTrends.map(trend => {
+        const monthData = getMonthDataForAccount(data, trend.date, accountName);
+        return monthData.services || {};
+    });
+
+    // Calculate total costs for each service across all months
+    const serviceMap = new Map();
+    accountServicesByMonth.forEach(monthServices => {
+        Object.entries(monthServices).forEach(([service, cost]) => {
+            if (service !== '合計コスト') {
+                const currentTotal = serviceMap.get(service) || 0;
+                serviceMap.set(service, currentTotal + cost);
+            }
+        });
+    });
+
+    // Get top services for this account
+    const sortedServices = Array.from(serviceMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, topServicesCount)
+        .map(entry => entry[0]);
+    
+    // Always add "その他" for remaining services
+    const otherServices = Array.from(serviceMap.keys()).filter(service => 
+        !sortedServices.includes(service)
+    );
+    if (otherServices.length > 0) {
+        sortedServices.push('その他');
+    }
+
+    // Generate colors - account total gets a distinct color, services get standard colors
+    const totalColor = CHART_COLORS.accounts[0]; // Use account color for total
+    const serviceColors = generateColors(sortedServices.length, 'services');
+    
+    // Build datasets
+    const datasets = [];
+
+    // Add account total line (prominent)
+    const totalData = data.monthlyTrends.map(trend => {
+        const monthData = getMonthDataForAccount(data, trend.date, accountName);
+        return Object.values(monthData.services || {})
+            .reduce((sum, cost) => sum + cost, 0);
+    });
+
+    datasets.push({
+        label: `${accountName} 合計`,
+        data: totalData,
+        borderColor: totalColor,
+        backgroundColor: totalColor + '20',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        tension: 0.3,
+        fill: false
+    });
+
+    // Add individual service lines (thinner)
+    sortedServices.forEach((service, index) => {
+        const serviceData = accountServicesByMonth.map(monthServices => {
+            if (service === 'その他') {
+                // Calculate "others" total
+                return otherServices.reduce((sum, otherService) => {
+                    return sum + (monthServices[otherService] || 0);
+                }, 0);
+            } else {
+                return monthServices[service] || 0;
+            }
+        });
+
+        const color = service === 'その他' ? '#9CA3AF' : serviceColors[index];
+        
+        datasets.push({
+            label: service,
+            data: serviceData,
+            borderColor: color,
+            backgroundColor: color + '20',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.3,
+            fill: false,
+            borderDash: service === 'その他' ? [5, 5] : undefined // Dashed line for "Others"
+        });
+    });
+
+    return {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: `${accountName} アカウント - サービス別コスト推移`,
+                    font: { size: 14, weight: 'bold' }
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: { size: 11 },
+                        generateLabels: function(chart) {
+                            const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                            const labels = original.call(this, chart);
+                            
+                            // Put account total first, then services
+                            labels.sort((a, b) => {
+                                if (a.text.includes('合計')) return -1;
+                                if (b.text.includes('合計')) return 1;
+                                if (a.text === 'その他') return 1;
+                                if (b.text === 'その他') return -1;
+                                return 0;
+                            });
+                            
+                            return labels;
+                        }
+                    }
+                },
+                tooltip: {
+                    ...CHART_DEFAULTS.plugins.tooltip,
+                    callbacks: {
+                        title: function(context) {
+                            return context[0].label;
+                        },
+                        label: function(context) {
+                            const datasetLabel = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            return `${datasetLabel}: ${formatCurrency(value)}`;
+                        },
+                        afterBody: function(context) {
+                            if (context.length > 1) {
+                                const totalValue = context.find(item => 
+                                    item.dataset.label.includes('合計')
+                                )?.parsed.y || 0;
+                                
+                                const serviceValues = context.filter(item => 
+                                    !item.dataset.label.includes('合計')
+                                );
+                                
+                                if (serviceValues.length > 0 && totalValue > 0) {
+                                    return serviceValues.map(item => {
+                                        const percentage = ((item.parsed.y / totalValue) * 100).toFixed(1);
+                                        return `  ${item.dataset.label}: ${percentage}%`;
+                                    });
+                                }
+                            }
+                            return [];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 } }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'コスト ($)',
+                        font: { size: 12, weight: 'bold' }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+
+/**
  * Get service data for a specific account
  * @param {string} accountName - Account name
  * @param {Object} data - Aggregated data
@@ -1173,7 +1385,8 @@ if (typeof module !== 'undefined' && module.exports) {
         destroyChart,
         formatCurrency,
         generateColors,
-        createAccountComparisonChartConfigs,
+        createAccountComparisonChartConfig,
+        createAccountServiceTrendConfig,
         getAccountServiceData
     };
 }

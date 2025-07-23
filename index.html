@@ -275,13 +275,22 @@
                     <div class="analysis-card full-width">
                         <h3>アカウント別削減効果比較</h3>
                         <div class="reduction-controls">
-                            <div class="period-selector">
-                                <label for="comparisonBaseline">比較基準:</label>
-                                <select id="comparisonBaseline">
-                                    <option value="first-month">初月比較</option>
-                                    <option value="peak-month">最高月比較</option>
-                                    <option value="previous-month">前月比較</option>
-                                </select>
+                            <div class="period-comparison-controls">
+                                <div class="period-controls-wrapper">
+                                    <div class="period-group">
+                                        <label>ベース月:</label>
+                                        <select id="baseMonth" class="period-select">
+                                            <!-- 動的に生成 -->
+                                        </select>
+                                    </div>
+                                    <div class="period-group">
+                                        <label>対象月:</label>
+                                        <select id="targetMonth" class="period-select">
+                                            <!-- 動的に生成 -->
+                                        </select>
+                                    </div>
+                                </div>
+                                <button id="executeComparison">比較実行</button>
                             </div>
                         </div>
                         <div id="reductionEffectChart" class="chart-container">

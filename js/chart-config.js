@@ -337,15 +337,19 @@ function destroyChart(chartInstance) {
  * @param {number} decimals - Number of decimal places
  * @returns {string} Formatted currency string
  */
-function formatCurrency(value, decimals = 0) {
+function formatCurrency(value, decimals = 0, allowNegative = false) {
     // Handle invalid values
     if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
         return '$0';
     }
     
-    // Ensure non-negative value
-    const safeValue = Math.max(0, value);
-    return '$' + Math.round(safeValue).toLocaleString();
+    // Handle negative values based on allowNegative parameter
+    const safeValue = allowNegative ? value : Math.max(0, value);
+    const absValue = Math.abs(safeValue);
+    const formatted = '$' + Math.round(absValue).toLocaleString();
+    
+    // Add negative sign if needed
+    return safeValue < 0 ? '-' + formatted : formatted;
 }
 
 /**

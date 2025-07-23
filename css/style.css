@@ -1044,6 +1044,10 @@ canvas {
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     margin-bottom: 1.5rem;
+    display: flex;
+    align-items: end;
+    gap: 1rem;
+    justify-content: space-between;
 }
 
 .date-range-selector {
@@ -1098,6 +1102,84 @@ canvas {
 .compare-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Custom Period Controls */
+.custom-period-controls {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.period-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0;
+}
+
+.period-controls-wrapper {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.period-group label {
+    font-weight: 500;
+    min-width: 80px;
+    color: #495057;
+}
+
+.period-select {
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    min-width: 120px;
+    height: 2.2rem;
+    box-sizing: border-box;
+}
+
+.period-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.period-group span {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+#executeComparison {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    height: 2.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#executeComparison:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+#executeComparison:disabled {
+    background: #a0aec0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 .compare-btn:disabled {

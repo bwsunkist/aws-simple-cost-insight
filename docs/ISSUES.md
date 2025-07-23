@@ -515,4 +515,15 @@ Error analyzing data: TypeError: Cannot convert undefined or null to object
 
 ---
 
-*最終更新: 2025-07-19*
+### 2025-07-23 機能改善: アカウント別削減効果比較の簡素化
+#### Issue なし（機能改善）: アカウント別削減効果比較の簡素化・精度向上
+- **対応内容**: 期間選択UIの簡素化（複雑な期間範囲→月単位選択）
+- **品質向上**: 
+  - 負の値表示対応（formatCurrency関数拡張）
+  - エラーハンドリング強化（バリデーション・nullチェック）
+  - デフォルト動作改善（前月比較自動設定）
+- **E2E検証結果**: 全機能正常動作・新機能検証完了
+- **コミット**: 8c26031 - "Simplify account reduction effect comparison to single month selection"
+- **影響**: ユーザビリティ向上、操作性改善、レイアウト統一
+
+*最終更新: 2025-07-23*

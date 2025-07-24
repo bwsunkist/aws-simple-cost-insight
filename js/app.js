@@ -1761,18 +1761,50 @@ function initializeStatisticalAnalysis() {
         });
     }
     
-    // Set default date ranges if available
-    if (aggregatedData.monthlyTrends && aggregatedData.monthlyTrends.length >= 2) {
-        const dates = aggregatedData.monthlyTrends.map(t => t.date).sort();
-        const midPoint = Math.floor(dates.length / 2);
+    // Set date range limits and default values based on available data
+    if (aggregatedData && aggregatedData.dateRange) {
+        const dataStart = aggregatedData.dateRange.startDate.substring(0, 7); // YYYY-MM format
+        const dataEnd = aggregatedData.dateRange.endDate.substring(0, 7);
         
-        // Set base period as first half
-        if (elements.baseStartDate) elements.baseStartDate.value = dates[0];
-        if (elements.baseEndDate) elements.baseEndDate.value = dates[midPoint - 1];
+        // Set min/max attributes for all statistical analysis date inputs
+        if (elements.baseStartDate) {
+            elements.baseStartDate.min = dataStart;
+            elements.baseStartDate.max = dataEnd;
+        }
+        if (elements.baseEndDate) {
+            elements.baseEndDate.min = dataStart;
+            elements.baseEndDate.max = dataEnd;
+        }
+        if (elements.compareStartDate) {
+            elements.compareStartDate.min = dataStart;
+            elements.compareStartDate.max = dataEnd;
+        }
+        if (elements.compareEndDate) {
+            elements.compareEndDate.min = dataStart;
+            elements.compareEndDate.max = dataEnd;
+        }
         
-        // Set compare period as second half
-        if (elements.compareStartDate) elements.compareStartDate.value = dates[midPoint];
-        if (elements.compareEndDate) elements.compareEndDate.value = dates[dates.length - 1];
+        // Set default date ranges if available and not already set
+        if (aggregatedData.monthlyTrends && aggregatedData.monthlyTrends.length >= 2) {
+            const dates = aggregatedData.monthlyTrends.map(t => t.date).sort();
+            const midPoint = Math.floor(dates.length / 2);
+            
+            // Set base period as first half (only if not already set)
+            if (elements.baseStartDate && !elements.baseStartDate.value) {
+                elements.baseStartDate.value = dates[0];
+            }
+            if (elements.baseEndDate && !elements.baseEndDate.value) {
+                elements.baseEndDate.value = dates[midPoint - 1];
+            }
+            
+            // Set compare period as second half (only if not already set)
+            if (elements.compareStartDate && !elements.compareStartDate.value) {
+                elements.compareStartDate.value = dates[midPoint];
+            }
+            if (elements.compareEndDate && !elements.compareEndDate.value) {
+                elements.compareEndDate.value = dates[dates.length - 1];
+            }
+        }
         
         validateStatisticalPeriods();
     }

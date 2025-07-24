@@ -2058,4 +2058,66 @@ title: {
 - **ユーザー体験**: 期間分析結果の視覚的理解容易性向上
 - **機能品質**: 統計的期間分析機能の完成度・信頼性向上
 
+## 2025-07-24 継続セッション: アカウント別サービス推移チャート表示改善 + 統計分析日付選択制限
+
+### 概要
+前セッションからの継続で、チャート表示の視認性向上と統計分析の日付選択制限を実装。ユーザビリティと分析精度の向上を図った。
+
+### 実施内容
+
+#### 1. アカウント別サービス推移チャート表示改善
+**問題**: 個別アカウント選択時にアカウント合計線（例："dev合計"）が表示され、サービス別内訳が見にくい状況
+
+**解決策**:
+- 個別アカウント選択時のアカウント合計線削除（js/chart-config.js:1291-1308行削除）
+- サービス線のスタイル強化（borderWidth: 3, pointRadius: 5）
+- 全アカウント表示モードは既存のまま維持
+
+**技術的実装**:
+```javascript
+// Skip account total line for individual accounts to improve service breakdown visibility
+// Generate colors for services only (no account total line)
+const serviceColors = generateColors(sortedServices.length, 'services');
+```
+
+#### 2. 統計的期間分析の日付選択制限
+**問題**: 統計分析で登録データ期間外の日付選択が可能で、分析結果が不正確
+
+**解決策**:
+- 登録データの期間範囲検出（aggregatedData.dateRange活用）
+- 全統計分析日付入力にmin/max属性設定
+- 期間指定比較分析と同様のUI制限実装
+
+**技術的実装**:
+```javascript
+// Set date range limits based on available data
+if (aggregatedData && aggregatedData.dateRange) {
+    const dataStart = aggregatedData.dateRange.startDate.substring(0, 7);
+    const dataEnd = aggregatedData.dateRange.endDate.substring(0, 7);
+    
+    // Set min/max attributes for all statistical analysis date inputs
+    if (elements.baseStartDate) {
+        elements.baseStartDate.min = dataStart;
+        elements.baseStartDate.max = dataEnd;
+    }
+    // ... similar for all other date inputs
+}
+```
+
+### 変更ファイル
+- **`js/chart-config.js`**: アカウント合計線削除、サービス線スタイル強化
+- **`js/app.js`**: 統計分析日付入力制限実装（initializeStatisticalAnalysis関数）
+- **`USER_MANUAL.md`**: 単一アカウントモード説明更新
+
+### 検証・テスト
+- **E2E検証**: Playwrightで両機能の動作確認完了
+- **チャート表示**: 個別アカウント選択時のサービス視認性向上確認
+- **日付制限**: データ期間（2025-01～2025-06）内のみ選択可能確認
+
+### 改善効果
+- **サービス別詳細視認性**: アカウント合計線削除により内訳分析が明確化
+- **分析精度向上**: 登録データ期間内のみの日付選択で分析結果の信頼性向上
+- **操作一貫性**: 期間指定比較分析と統一的な日付選択UI実現
+- **ユーザビリティ**: 直感的な操作と分析結果の正確性を両立
+
 最終更新: 2025-07-24

@@ -103,7 +103,17 @@ function cacheElements() {
         // Account service trend chart
         accountServiceTrendAccount: document.getElementById('accountServiceTrendAccount'),
         accountServiceTrendTopCount: document.getElementById('accountServiceTrendTopCount'),
-        accountServiceTrendChart: document.getElementById('accountServiceTrendChart')
+        accountServiceTrendChart: document.getElementById('accountServiceTrendChart'),
+        
+        // Statistical analysis
+        statisticalAccountSelect: document.getElementById('statisticalAccountSelect'),
+        baseStartDate: document.getElementById('baseStartDate'),
+        baseEndDate: document.getElementById('baseEndDate'),
+        compareStartDate: document.getElementById('compareStartDate'),
+        compareEndDate: document.getElementById('compareEndDate'),
+        executeStatisticalAnalysis: document.getElementById('executeStatisticalAnalysis'),
+        statisticalAnalysisChart: document.getElementById('statisticalAnalysisChart'),
+        statisticalAnalysisResults: document.getElementById('statisticalAnalysisResults')
     };
 }
 
@@ -167,6 +177,23 @@ function setupEventListeners() {
     }
     if (elements.comparePeriodBtn) {
         elements.comparePeriodBtn.addEventListener('click', handlePeriodComparison);
+    }
+    
+    // Statistical analysis
+    if (elements.executeStatisticalAnalysis) {
+        elements.executeStatisticalAnalysis.addEventListener('click', handleStatisticalAnalysis);
+    }
+    if (elements.baseStartDate) {
+        elements.baseStartDate.addEventListener('change', validateStatisticalPeriods);
+    }
+    if (elements.baseEndDate) {
+        elements.baseEndDate.addEventListener('change', validateStatisticalPeriods);
+    }
+    if (elements.compareStartDate) {
+        elements.compareStartDate.addEventListener('change', validateStatisticalPeriods);
+    }
+    if (elements.compareEndDate) {
+        elements.compareEndDate.addEventListener('change', validateStatisticalPeriods);
     }
 }
 
@@ -495,6 +522,9 @@ function displayAnalysisResults() {
     
     // Initialize period comparison controls
     validatePeriodSelection();
+    
+    // Initialize statistical analysis controls
+    initializeStatisticalAnalysis();
 }
 
 /**
@@ -1420,6 +1450,331 @@ function updatePeriodComparisonChart(comparisonData) {
         
         const config = createPeriodComparisonChartConfig(comparisonData);
         chartInstances.periodComparison = new Chart(ctx, config);
+    }
+}
+
+/**
+ * Validate statistical analysis periods
+ */
+function validateStatisticalPeriods() {
+    if (!elements.executeStatisticalAnalysis) return;
+    
+    const baseStart = elements.baseStartDate.value;
+    const baseEnd = elements.baseEndDate.value;
+    const compareStart = elements.compareStartDate.value;
+    const compareEnd = elements.compareEndDate.value;
+    
+    // Check that all fields are filled and both periods have at least 1 month
+    const isValidBase = baseStart && baseEnd && baseStart <= baseEnd;
+    const isValidCompare = compareStart && compareEnd && compareStart <= compareEnd;
+    
+    elements.executeStatisticalAnalysis.disabled = !(isValidBase && isValidCompare);
+}
+
+/**
+ * Handle statistical analysis execution
+ */
+function handleStatisticalAnalysis() {
+    if (!validateStatisticalInput()) return;
+    
+    const selectedAccount = elements.statisticalAccountSelect.value;
+    const basePeriod = {
+        start: elements.baseStartDate.value,
+        end: elements.baseEndDate.value
+    };
+    const comparePeriod = {
+        start: elements.compareStartDate.value,
+        end: elements.compareEndDate.value
+    };
+    
+    try {
+        const analysisData = calculateStatisticalAnalysis(selectedAccount, basePeriod, comparePeriod);
+        displayStatisticalAnalysisResults(analysisData, basePeriod, comparePeriod);
+        updateStatisticalAnalysisChart(analysisData, basePeriod, comparePeriod);
+    } catch (error) {
+        console.error('Statistical analysis error:', error);
+        alert('統計分析でエラーが発生しました: ' + error.message);
+    }
+}
+
+/**
+ * Get the last day of a month in YYYY-MM-DD format
+ * @param {string} yearMonth - Year-month in YYYY-MM format
+ * @returns {string} Last day in YYYY-MM-DD format
+ */
+function getLastDayOfMonth(yearMonth) {
+    const [year, month] = yearMonth.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate(); // month is 1-indexed, so this gets last day of previous month
+    return `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+}
+
+/**
+ * Validate statistical analysis input
+ */
+function validateStatisticalInput() {
+    const baseStart = elements.baseStartDate.value;
+    const baseEnd = elements.baseEndDate.value;
+    const compareStart = elements.compareStartDate.value;
+    const compareEnd = elements.compareEndDate.value;
+    
+    if (!baseStart || !baseEnd || !compareStart || !compareEnd) {
+        alert('すべての期間を入力してください。');
+        return false;
+    }
+    
+    if (baseStart > baseEnd) {
+        alert('ベース期間の開始月は終了月より前である必要があります。');
+        return false;
+    }
+    
+    if (compareStart > compareEnd) {
+        alert('比較対象期間の開始月は終了月より前である必要があります。');
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Calculate statistical analysis data
+ */
+function calculateStatisticalAnalysis(selectedAccount, basePeriod, comparePeriod) {
+    let monthlyData;
+    
+    // Get data based on account selection
+    if (selectedAccount === 'all') {
+        if (!aggregatedData || !aggregatedData.monthlyTrends) {
+            throw new Error('集約データが利用できません');
+        }
+        monthlyData = aggregatedData.monthlyTrends;
+    } else {
+        const account = registeredAccounts.find(acc => acc.name === selectedAccount);
+        if (!account || !account.data || !account.data.monthlyData) {
+            throw new Error('選択されたアカウントのデータが見つかりません');
+        }
+        monthlyData = account.data.monthlyData;
+    }
+    
+    // Convert period dates to proper comparison format
+    const baseStartDate = basePeriod.start + '-01'; // e.g. "2025-01" -> "2025-01-01"
+    const baseEndDate = getLastDayOfMonth(basePeriod.end); // e.g. "2025-04" -> "2025-04-30"
+    const compareStartDate = comparePeriod.start + '-01';
+    const compareEndDate = getLastDayOfMonth(comparePeriod.end);
+    
+    // Filter data for base period
+    const baseData = monthlyData.filter(month => 
+        month.date >= baseStartDate && month.date <= baseEndDate
+    );
+    
+    // Filter data for compare period
+    const compareData = monthlyData.filter(month => 
+        month.date >= compareStartDate && month.date <= compareEndDate
+    );
+    
+    if (baseData.length === 0) {
+        throw new Error('ベース期間にデータが見つかりません');
+    }
+    
+    if (compareData.length === 0) {
+        throw new Error('比較対象期間にデータが見つかりません');
+    }
+    
+    // Calculate statistics
+    const baseStats = calculatePeriodStatistics(baseData);
+    const compareStats = calculatePeriodStatistics(compareData);
+    
+    return {
+        account: selectedAccount,
+        baseStats,
+        compareStats,
+        basePeriod,
+        comparePeriod,
+        allMonthlyData: monthlyData
+    };
+}
+
+/**
+ * Calculate statistics for a period
+ */
+function calculatePeriodStatistics(periodData) {
+    const costs = periodData.map(month => month.totalCost);
+    const n = costs.length;
+    
+    if (n === 0) return { mean: 0, stdDev: 0, min: 0, max: 0, count: 0 };
+    
+    // Calculate mean
+    const mean = costs.reduce((sum, cost) => sum + cost, 0) / n;
+    
+    // Calculate standard deviation
+    const variance = costs.reduce((sum, cost) => sum + Math.pow(cost - mean, 2), 0) / n;
+    const stdDev = Math.sqrt(variance);
+    
+    // Find min and max
+    const min = Math.min(...costs);
+    const max = Math.max(...costs);
+    
+    return {
+        mean: Math.round(mean * 100) / 100,
+        stdDev: Math.round(stdDev * 100) / 100,
+        min: Math.round(min * 100) / 100,
+        max: Math.round(max * 100) / 100,
+        count: n,
+        data: periodData
+    };
+}
+
+/**
+ * Display statistical analysis results
+ */
+function displayStatisticalAnalysisResults(analysisData, basePeriod, comparePeriod) {
+    if (!elements.statisticalAnalysisResults) return;
+    
+    const { baseStats, compareStats } = analysisData;
+    const meanDifference = compareStats.mean - baseStats.mean;
+    const percentChange = baseStats.mean > 0 ? ((meanDifference / baseStats.mean) * 100) : 0;
+    
+    const html = `
+        <div class="statistics-summary">
+            <div class="statistics-card base-period">
+                <h5>ベース期間</h5>
+                <div class="statistics-period">${basePeriod.start} 〜 ${basePeriod.end}</div>
+                <div class="statistics-value">${formatCurrency(baseStats.mean)}</div>
+                <div class="statistics-label">平均値 (${baseStats.count}ヶ月)</div>
+                <div class="statistics-label">標準偏差: ${formatCurrency(baseStats.stdDev)}</div>
+            </div>
+            <div class="statistics-card compare-period">
+                <h5>比較対象期間</h5>
+                <div class="statistics-period">${comparePeriod.start} 〜 ${comparePeriod.end}</div>
+                <div class="statistics-value">${formatCurrency(compareStats.mean)}</div>
+                <div class="statistics-label">平均値 (${compareStats.count}ヶ月)</div>
+                <div class="statistics-label">標準偏差: ${formatCurrency(compareStats.stdDev)}</div>
+            </div>
+            <div class="statistics-card difference-period ${meanDifference < 0 ? 'negative' : ''}">
+                <h5>差分</h5>
+                <div class="statistics-value">${meanDifference >= 0 ? '+' : ''}${formatCurrency(meanDifference, 0, true)}</div>
+                <div class="statistics-label">${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(1)}% 変化</div>
+            </div>
+        </div>
+        <div class="statistics-details">
+            <h4>詳細統計</h4>
+            <table class="statistics-table">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>ベース期間</th>
+                        <th>比較対象期間</th>
+                        <th>差分</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>平均値</td>
+                        <td>${formatCurrency(baseStats.mean)}</td>
+                        <td>${formatCurrency(compareStats.mean)}</td>
+                        <td>${meanDifference >= 0 ? '+' : ''}${formatCurrency(meanDifference, 0, true)}</td>
+                    </tr>
+                    <tr>
+                        <td>標準偏差</td>
+                        <td>${formatCurrency(baseStats.stdDev)}</td>
+                        <td>${formatCurrency(compareStats.stdDev)}</td>
+                        <td>${formatCurrency(compareStats.stdDev - baseStats.stdDev, 0, true)}</td>
+                    </tr>
+                    <tr>
+                        <td>最小値</td>
+                        <td>${formatCurrency(baseStats.min)}</td>
+                        <td>${formatCurrency(compareStats.min)}</td>
+                        <td>${formatCurrency(compareStats.min - baseStats.min, 0, true)}</td>
+                    </tr>
+                    <tr>
+                        <td>最大値</td>
+                        <td>${formatCurrency(baseStats.max)}</td>
+                        <td>${formatCurrency(compareStats.max)}</td>
+                        <td>${formatCurrency(compareStats.max - baseStats.max, 0, true)}</td>
+                    </tr>
+                    <tr>
+                        <td>期間長</td>
+                        <td>${baseStats.count}ヶ月</td>
+                        <td>${compareStats.count}ヶ月</td>
+                        <td>${compareStats.count - baseStats.count}ヶ月</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    elements.statisticalAnalysisResults.innerHTML = html;
+}
+
+/**
+ * Update statistical analysis chart
+ */
+function updateStatisticalAnalysisChart(analysisData, basePeriod, comparePeriod) {
+    const chartContainer = elements.statisticalAnalysisChart;
+    if (!chartContainer) return;
+    
+    // Destroy existing chart first
+    if (chartInstances.statisticalAnalysis) {
+        chartInstances.statisticalAnalysis.destroy();
+        chartInstances.statisticalAnalysis = null;
+    }
+    
+    // Clear container and recreate canvas
+    chartContainer.innerHTML = '<canvas></canvas>';
+    
+    const canvas = chartContainer.querySelector('canvas');
+    if (canvas && typeof Chart !== 'undefined') {
+        // Set canvas style attributes to ensure proper sizing
+        canvas.style.width = '100%';
+        canvas.style.height = '400px';
+        canvas.style.maxWidth = '100%';
+        
+        const ctx = canvas.getContext('2d');
+        const config = createStatisticalAnalysisChartConfig(analysisData, basePeriod, comparePeriod);
+        
+        // Create new chart instance
+        chartInstances.statisticalAnalysis = new Chart(ctx, config);
+        
+        // Force a resize after creation to ensure proper display
+        setTimeout(() => {
+            if (chartInstances.statisticalAnalysis) {
+                chartInstances.statisticalAnalysis.resize();
+            }
+        }, 100);
+    }
+}
+
+/**
+ * Initialize statistical analysis UI
+ */
+function initializeStatisticalAnalysis() {
+    if (!aggregatedData || !registeredAccounts.length) return;
+    
+    // Populate account selector
+    if (elements.statisticalAccountSelect) {
+        elements.statisticalAccountSelect.innerHTML = '<option value="all">全アカウント合計</option>';
+        
+        registeredAccounts.forEach(account => {
+            const option = document.createElement('option');
+            option.value = account.name;
+            option.textContent = account.name;
+            elements.statisticalAccountSelect.appendChild(option);
+        });
+    }
+    
+    // Set default date ranges if available
+    if (aggregatedData.monthlyTrends && aggregatedData.monthlyTrends.length >= 2) {
+        const dates = aggregatedData.monthlyTrends.map(t => t.date).sort();
+        const midPoint = Math.floor(dates.length / 2);
+        
+        // Set base period as first half
+        if (elements.baseStartDate) elements.baseStartDate.value = dates[0];
+        if (elements.baseEndDate) elements.baseEndDate.value = dates[midPoint - 1];
+        
+        // Set compare period as second half
+        if (elements.compareStartDate) elements.compareStartDate.value = dates[midPoint];
+        if (elements.compareEndDate) elements.compareEndDate.value = dates[dates.length - 1];
+        
+        validateStatisticalPeriods();
     }
 }
 

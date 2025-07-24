@@ -301,6 +301,57 @@
                         </div>
                     </div>
                     <div class="analysis-card full-width">
+                        <h3>統計的期間分析</h3>
+                        <div class="statistical-analysis-controls">
+                            <div class="analysis-config-section">
+                                <div class="account-selection-group">
+                                    <label>分析対象:</label>
+                                    <select id="statisticalAccountSelect" class="account-select">
+                                        <option value="all">全アカウント合計</option>
+                                        <!-- 動的に生成 -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="period-ranges-section">
+                                <div class="period-range-group">
+                                    <h4>ベース期間</h4>
+                                    <div class="period-inputs">
+                                        <div class="date-input-group">
+                                            <label>開始月:</label>
+                                            <input type="month" id="baseStartDate" class="date-input">
+                                        </div>
+                                        <div class="date-input-group">
+                                            <label>終了月:</label>
+                                            <input type="month" id="baseEndDate" class="date-input">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="period-range-group">
+                                    <h4>比較対象期間</h4>
+                                    <div class="period-inputs">
+                                        <div class="date-input-group">
+                                            <label>開始月:</label>
+                                            <input type="month" id="compareStartDate" class="date-input">
+                                        </div>
+                                        <div class="date-input-group">
+                                            <label>終了月:</label>
+                                            <input type="month" id="compareEndDate" class="date-input">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analysis-execution">
+                                <button id="executeStatisticalAnalysis" class="statistical-analysis-btn">統計分析実行</button>
+                            </div>
+                        </div>
+                        <div id="statisticalAnalysisChart" class="chart-container">
+                            <canvas></canvas>
+                        </div>
+                        <div id="statisticalAnalysisResults" class="statistical-results">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                    <div class="analysis-card full-width">
                         <h3>期間指定比較分析</h3>
                         <div class="period-comparison-controls">
                             <div class="date-range-selector">

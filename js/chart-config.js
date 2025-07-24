@@ -1486,6 +1486,217 @@ if (typeof module !== 'undefined' && module.exports) {
         generateColors,
         createAccountComparisonChartConfig,
         createAccountServiceTrendConfig,
-        getAccountServiceData
+        getAccountServiceData,
+        createStatisticalAnalysisChartConfig
+    };
+}
+
+/**
+ * Get last day of month for period date conversion
+ * @param {string} yearMonth - Year-month string like "2025-04"
+ * @returns {string} - Full date string like "2025-04-30"
+ */
+function getLastDayOfMonth(yearMonth) {
+    const [year, month] = yearMonth.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+}
+
+/**
+ * Create statistical analysis chart configuration
+ */
+function createStatisticalAnalysisChartConfig(analysisData, basePeriod, comparePeriod) {
+    const { allMonthlyData, baseStats, compareStats } = analysisData;
+    
+    // Sort data by date
+    const sortedData = allMonthlyData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Create labels from sorted dates
+    const labels = sortedData.map(month => {
+        const date = new Date(month.date);
+        return `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, '0')}月`;
+    });
+    
+    // Create main cost data
+    const mainCostData = sortedData.map(month => month.totalCost);
+    
+    // Convert period dates to proper comparison format (same as statistical calculation)
+    const baseStartDate = basePeriod.start + '-01'; // e.g. "2025-01" -> "2025-01-01"
+    const baseEndDate = getLastDayOfMonth(basePeriod.end); // e.g. "2025-04" -> "2025-04-30"
+    const compareStartDate = comparePeriod.start + '-01';
+    const compareEndDate = getLastDayOfMonth(comparePeriod.end);
+    
+    // Create base period average data
+    const baseAvgData = labels.map((label, index) => {
+        const date = sortedData[index].date;
+        return (date >= baseStartDate && date <= baseEndDate) ? baseStats.mean : null;
+    });
+    
+    // Create compare period average data
+    const compareAvgData = labels.map((label, index) => {
+        const date = sortedData[index].date;
+        return (date >= compareStartDate && date <= compareEndDate) ? compareStats.mean : null;
+    });
+    
+    const datasets = [
+        // Main cost trend line
+        {
+            label: analysisData.account === 'all' ? '全アカウント合計コスト' : `${analysisData.account} コスト`,
+            data: mainCostData,
+            borderColor: '#3182ce',
+            backgroundColor: 'rgba(49, 130, 206, 0.1)',
+            borderWidth: 2,
+            fill: false,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.3
+        },
+        // Base period average line
+        {
+            label: `ベース期間平均 (${formatCurrency(baseStats.mean)})`,
+            data: baseAvgData,
+            borderColor: '#3182ce',
+            backgroundColor: 'rgba(49, 130, 206, 0.2)',
+            borderWidth: 3,
+            borderDash: [5, 5],
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            spanGaps: false
+        },
+        // Compare period average line
+        {
+            label: `比較対象期間平均 (${formatCurrency(compareStats.mean)})`,
+            data: compareAvgData,
+            borderColor: '#d69e2e',
+            backgroundColor: 'rgba(214, 158, 46, 0.2)',
+            borderWidth: 3,
+            borderDash: [10, 5],
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            spanGaps: false
+        }
+    ];
+    
+    return {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 10,
+                    right: 10,
+                    bottom: 10,
+                    left: 10
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: '統計的期間分析 - コスト推移と平均値',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    },
+                    padding: 20
+                },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    borderColor: '#3182ce',
+                    borderWidth: 1,
+                    cornerRadius: 6,
+                    callbacks: {
+                        title: function(tooltips) {
+                            return tooltips[0].label;
+                        },
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            
+                            if (context.parsed.y !== null) {
+                                label += formatCurrency(context.parsed.y);
+                                
+                                // Add period information for trend data
+                                if (context.datasetIndex === 0) {
+                                    const dataIndex = context.dataIndex;
+                                    const date = sortedData[dataIndex].date;
+                                    if (date >= baseStartDate && date <= baseEndDate) {
+                                        label += ' (ベース期間)';
+                                    } else if (date >= compareStartDate && date <= compareEndDate) {
+                                        label += ' (比較対象期間)';
+                                    }
+                                }
+                            }
+                            
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: '期間',
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'コスト (USD)',
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    hoverBackgroundColor: '#3182ce',
+                    hoverBorderColor: 'white',
+                    hoverBorderWidth: 2
+                }
+            }
+        }
     };
 }

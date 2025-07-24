@@ -1,5 +1,60 @@
 # 開発ログ
 
+## 2025-07-24 機能削除: 期間指定比較分析の冗長機能削除
+
+### 概要
+期間指定比較分析機能を削除。統計的期間分析機能と機能重複があり、より高機能な統計的期間分析に統合することでUIの簡素化と保守性向上を実現。
+
+### 実施内容
+
+#### 1. 機能重複分析
+**期間指定比較分析の機能**:
+- 期間指定（開始月〜終了月）
+- アカウント別総コスト・月平均計算
+- 基本的な期間比較チャート
+
+**統計的期間分析の機能**:
+- 2つの期間指定（ベース期間・比較期間）
+- 統計的分析（平均・標準偏差・統計的有意性）
+- 高度な期間比較チャートと詳細結果
+- アカウント選択機能
+
+**結論**: 期間指定比較は統計的期間分析の機能サブセットで完全に冗長
+
+#### 2. コード削除内容
+**HTML削除** (`index.html`):
+- 期間指定比較分析セクション全体を削除
+- UI要素: 開始月・終了月入力、比較実行ボタン、結果表示エリア
+
+**JavaScript削除** (`js/app.js`):
+- DOM要素参照: `startDate`, `endDate`, `comparePeriodBtn`, `periodComparisonChart`, `periodComparisonTable`
+- イベントリスナー: 期間選択変更・比較実行イベント
+- 関数削除: `validatePeriodSelection()`, `handlePeriodComparison()`, `calculatePeriodComparison()`, `displayPeriodComparisonResults()`, `updatePeriodComparisonChart()`
+
+**Chart.js設定削除** (`js/chart-config.js`):
+- `createPeriodComparisonChartConfig()` 関数削除
+- エクスポート関数リストから削除
+
+#### 3. ドキュメント更新
+**ユーザーマニュアル** (`USER_MANUAL.md`):
+- 期間指定比較分析セクション（5.7）削除
+- 機能一覧から期間指定比較を削除
+
+**タスク進捗** (`docs/task-progress.md`):
+- Phase 3.3を削除済みとしてマーク
+- 進捗サマリーを73/73タスクに修正
+
+### 改善効果
+- **UI簡素化**: 冗長な機能削除により操作性向上
+- **保守性向上**: 重複コード削除によりメンテナンス負荷軽減
+- **機能集約**: 統計的期間分析に機能を集約し、より高度な分析機能に注力
+- **学習コスト軽減**: 類似機能の混在を解消しユーザーの混乱を回避
+
+### Git操作
+- コミット対象: `index.html`, `js/app.js`, `js/chart-config.js`, `USER_MANUAL.md`, `docs/task-progress.md`, `docs/development-log.md`
+
+*実施日: 2025-07-24*
+
 ## 2025-07-23 機能改善: アカウント別削減効果比較の簡素化と精度向上
 
 ### 概要

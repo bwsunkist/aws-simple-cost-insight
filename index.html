@@ -185,7 +185,7 @@
 
                     <!-- サービス別コスト比較 -->
                     <div class="chart-container">
-                        <h3>サービス別コスト比較</h3>
+                        <h3>サービス別コスト比較（全アカウント合計）</h3>
                         <div class="chart-controls">
                             <select id="serviceComparisonPeriod">
                                 <option value="latest">最新月</option>
@@ -348,28 +348,6 @@
                             <canvas></canvas>
                         </div>
                         <div id="statisticalAnalysisResults" class="statistical-results">
-                            <!-- 動的に生成 -->
-                        </div>
-                    </div>
-                    <div class="analysis-card full-width">
-                        <h3>期間指定比較分析</h3>
-                        <div class="period-comparison-controls">
-                            <div class="date-range-selector">
-                                <div class="date-input-group">
-                                    <label for="startDate">開始月:</label>
-                                    <input type="month" id="startDate" class="date-input">
-                                </div>
-                                <div class="date-input-group">
-                                    <label for="endDate">終了月:</label>
-                                    <input type="month" id="endDate" class="date-input">
-                                </div>
-                                <button id="comparePeriodBtn" class="compare-btn">期間比較実行</button>
-                            </div>
-                        </div>
-                        <div id="periodComparisonChart" class="chart-container">
-                            <canvas></canvas>
-                        </div>
-                        <div id="periodComparisonTable" class="analysis-content">
                             <!-- 動的に生成 -->
                         </div>
                     </div>

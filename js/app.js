@@ -82,13 +82,6 @@ function cacheElements() {
         targetMonth: document.getElementById('targetMonth'),
         executeComparison: document.getElementById('executeComparison'),
         
-        // Period comparison
-        startDate: document.getElementById('startDate'),
-        endDate: document.getElementById('endDate'),
-        comparePeriodBtn: document.getElementById('comparePeriodBtn'),
-        periodComparisonChart: document.getElementById('periodComparisonChart'),
-        periodComparisonTable: document.getElementById('periodComparisonTable'),
-        
         // Chart controls
         serviceComparisonPeriod: document.getElementById('serviceComparisonPeriod'),
         stackedAccount: document.getElementById('stackedAccount'),
@@ -166,17 +159,6 @@ function setupEventListeners() {
     // Reduction effect comparison - simplified month selection
     if (elements.executeComparison) {
         elements.executeComparison.addEventListener('click', handleMonthComparison);
-    }
-    
-    // Period comparison
-    if (elements.startDate) {
-        elements.startDate.addEventListener('change', validatePeriodSelection);
-    }
-    if (elements.endDate) {
-        elements.endDate.addEventListener('change', validatePeriodSelection);
-    }
-    if (elements.comparePeriodBtn) {
-        elements.comparePeriodBtn.addEventListener('click', handlePeriodComparison);
     }
     
     // Statistical analysis
@@ -477,11 +459,11 @@ function displayCharts() {
     // Create account comparison charts
     displayAccountComparisonChart();
     
-    // Create account service trend chart
-    displayAccountServiceTrendChart();
-    
-    // Update account options for service trend chart
+    // Update account options for service trend chart first, then create chart
     updateAccountServiceTrendOptions();
+    
+    // Create account service trend chart with updated options
+    displayAccountServiceTrendChart();
 }
 
 /**
@@ -522,9 +504,6 @@ function displayAnalysisResults() {
     
     // Reduction effect comparison
     displayReductionEffectComparison();
-    
-    // Initialize period comparison controls
-    validatePeriodSelection();
     
     // Initialize statistical analysis controls
     initializeStatisticalAnalysis();
@@ -1075,9 +1054,10 @@ function displayAccountServiceTrendChart() {
 function updateAccountServiceTrendOptions() {
     if (!elements.accountServiceTrendAccount || !aggregatedData) return;
     
-    const options = ['<option value="" selected>全アカウント</option>'];
-    registeredAccounts.forEach(account => {
-        options.push(`<option value="${escapeHtml(account.name)}">${escapeHtml(account.name)}</option>`);
+    const options = ['<option value="">全アカウント</option>'];
+    registeredAccounts.forEach((account, index) => {
+        const isSelected = index === 0 ? ' selected' : ''; // First account selected by default
+        options.push(`<option value="${escapeHtml(account.name)}"${isSelected}>${escapeHtml(account.name)}</option>`);
     });
     
     elements.accountServiceTrendAccount.innerHTML = options.join('');
@@ -1264,197 +1244,6 @@ function getTrendIcon(trend) {
     }
 }
 
-/**
- * Validate period selection
- */
-function validatePeriodSelection() {
-    if (!elements.startDate || !elements.endDate || !elements.comparePeriodBtn) return;
-    
-    const startDate = elements.startDate.value;
-    const endDate = elements.endDate.value;
-    const hasData = registeredAccounts.length > 0;
-    
-    const isValid = startDate && endDate && startDate <= endDate && hasData;
-    elements.comparePeriodBtn.disabled = !isValid;
-    
-    // Set min/max based on available data
-    if (aggregatedData && aggregatedData.dateRange) {
-        const dataStart = aggregatedData.dateRange.startDate.substring(0, 7); // YYYY-MM format
-        const dataEnd = aggregatedData.dateRange.endDate.substring(0, 7);
-        
-        if (!elements.startDate.min) {
-            elements.startDate.min = dataStart;
-            elements.startDate.max = dataEnd;
-        }
-        if (!elements.endDate.min) {
-            elements.endDate.min = dataStart;
-            elements.endDate.max = dataEnd;
-        }
-    }
-}
-
-/**
- * Handle period comparison
- */
-async function handlePeriodComparison() {
-    if (!registeredAccounts.length || !elements.startDate.value || !elements.endDate.value) {
-        showMessage('期間を選択してください', 'error');
-        return;
-    }
-    
-    try {
-        // Show loading state
-        elements.comparePeriodBtn.disabled = true;
-        elements.comparePeriodBtn.textContent = '比較中...';
-        
-        const startDate = elements.startDate.value + '-01'; // Add day to make it a full date
-        const endDate = elements.endDate.value + '-01';
-        
-        console.log('Comparing periods:', startDate, 'to', endDate);
-        
-        // Calculate period comparison data
-        const comparisonData = calculatePeriodComparison(startDate, endDate);
-        
-        // Display results
-        displayPeriodComparisonResults(comparisonData);
-        
-        showMessage('期間比較分析が完了しました', 'success');
-        
-    } catch (error) {
-        console.error('Error in period comparison:', error);
-        showMessage(`期間比較エラー: ${error.message}`, 'error');
-    } finally {
-        // Reset button state
-        elements.comparePeriodBtn.disabled = false;
-        elements.comparePeriodBtn.textContent = '期間比較実行';
-        validatePeriodSelection();
-    }
-}
-
-/**
- * Calculate period comparison data
- */
-function calculatePeriodComparison(startDate, endDate) {
-    const startTime = new Date(startDate).getTime();
-    const endTime = new Date(endDate).getTime();
-    
-    return registeredAccounts.map(account => {
-        const monthlyData = account.data.monthlyData || [];
-        
-        // Filter data within the specified period
-        const periodData = monthlyData.filter(month => {
-            const monthTime = new Date(month.date).getTime();
-            return monthTime >= startTime && monthTime <= endTime;
-        });
-        
-        if (periodData.length === 0) {
-            return {
-                accountName: account.name,
-                totalCost: 0,
-                avgMonthlyCost: 0,
-                monthCount: 0,
-                services: {},
-                trend: 'no-data'
-            };
-        }
-        
-        // Calculate statistics for the period
-        const totalCost = periodData.reduce((sum, month) => sum + month.totalCost, 0);
-        const avgMonthlyCost = totalCost / periodData.length;
-        
-        // Aggregate services for the period
-        const services = {};
-        periodData.forEach(month => {
-            if (month.services) {
-                Object.entries(month.services).forEach(([service, cost]) => {
-                    services[service] = (services[service] || 0) + cost;
-                });
-            }
-        });
-        
-        // Calculate trend
-        let trend = 'stable';
-        if (periodData.length >= 2) {
-            const firstMonth = periodData[0].totalCost;
-            const lastMonth = periodData[periodData.length - 1].totalCost;
-            const change = ((lastMonth - firstMonth) / firstMonth) * 100;
-            
-            if (change > 5) trend = 'increasing';
-            else if (change < -5) trend = 'decreasing';
-        }
-        
-        return {
-            accountName: account.name,
-            totalCost,
-            avgMonthlyCost,
-            monthCount: periodData.length,
-            services,
-            trend,
-            startDate,
-            endDate
-        };
-    });
-}
-
-/**
- * Display period comparison results
- */
-function displayPeriodComparisonResults(comparisonData) {
-    if (!elements.periodComparisonTable || !comparisonData.length) return;
-    
-    // Create summary table
-    const tableHTML = `
-        <h4>期間サマリー (${comparisonData[0].startDate.substring(0, 7)} 〜 ${comparisonData[0].endDate.substring(0, 7)})</h4>
-        <table>
-            <thead>
-                <tr>
-                    <th>アカウント</th>
-                    <th>期間内総コスト</th>
-                    <th>月平均コスト</th>
-                    <th>対象月数</th>
-                    <th>トレンド</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${comparisonData.map(data => `
-                    <tr>
-                        <td>${escapeHtml(data.accountName)}</td>
-                        <td>${formatCurrency(data.totalCost)}</td>
-                        <td>${formatCurrency(data.avgMonthlyCost)}</td>
-                        <td>${data.monthCount}ヶ月</td>
-                        <td class="growth-${data.trend}">${getTrendIcon(data.trend)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-    
-    elements.periodComparisonTable.innerHTML = tableHTML;
-    
-    // Update chart
-    updatePeriodComparisonChart(comparisonData);
-}
-
-/**
- * Update period comparison chart
- */
-function updatePeriodComparisonChart(comparisonData) {
-    if (!elements.periodComparisonChart || !comparisonData.length) return;
-    
-    // Create or update chart
-    const canvas = elements.periodComparisonChart.querySelector('canvas');
-    if (canvas && typeof Chart !== 'undefined') {
-        const ctx = canvas.getContext('2d');
-        
-        // Destroy existing chart
-        if (chartInstances.periodComparison) {
-            chartInstances.periodComparison.destroy();
-        }
-        
-        const config = createPeriodComparisonChartConfig(comparisonData);
-        chartInstances.periodComparison = new Chart(ctx, config);
-    }
-}
 
 /**
  * Validate statistical analysis periods

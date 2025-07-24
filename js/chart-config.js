@@ -473,118 +473,6 @@ function createReductionEffectChartConfig(reductionData) {
     };
 }
 
-/**
- * Create period comparison chart configuration
- * @param {Array} periodData - Period comparison data
- * @returns {Object} Chart.js configuration
- */
-function createPeriodComparisonChartConfig(periodData) {
-    if (!periodData || periodData.length === 0) {
-        return createEmptyChartConfig('期間比較データがありません');
-    }
-
-    const labels = periodData.map(data => data.accountName);
-    const totalCosts = periodData.map(data => data.totalCost);
-    const avgMonthlyCosts = periodData.map(data => data.avgMonthlyCost);
-
-    return {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: '期間内総コスト ($)',
-                    data: totalCosts,
-                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 1,
-                    yAxisID: 'y',
-                },
-                {
-                    label: '月平均コスト ($)',
-                    data: avgMonthlyCosts,
-                    type: 'line',
-                    borderColor: CHART_COLORS.warning,
-                    backgroundColor: CHART_COLORS.warning + '20',
-                    borderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    yAxisID: 'y1',
-                    tension: 0.3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: '期間指定コスト比較',
-                    font: { size: 14, weight: 'bold' }
-                },
-                legend: {
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20
-                    }
-                },
-                tooltip: {
-                    ...CHART_DEFAULTS.plugins.tooltip,
-                    callbacks: {
-                        label: function(context) {
-                            const datasetLabel = context.dataset.label || '';
-                            const value = context.parsed.y;
-                            return `${datasetLabel}: ${formatCurrency(value)}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 11 } }
-                },
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: '総コスト ($)'
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return formatCurrency(value);
-                        }
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: '月平均コスト ($)'
-                    },
-                    grid: {
-                        drawOnChartArea: false,
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return formatCurrency(value);
-                        }
-                    }
-                }
-            }
-        }
-    };
-}
 
 /**
  * Create service stacked chart configuration
@@ -1460,7 +1348,6 @@ if (typeof module !== 'undefined' && module.exports) {
         createServiceComparisonConfig,
         createServiceStackedConfig,
         createReductionEffectChartConfig,
-        createPeriodComparisonChartConfig,
         createEmptyChartConfig,
         updateChart,
         destroyChart,

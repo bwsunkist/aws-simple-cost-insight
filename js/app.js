@@ -490,6 +490,9 @@ function displayCharts() {
 function displayAnalysisResults() {
     if (!aggregatedData || !aggregatedData.serviceAggregation) return;
     
+    // Initialize period selectors for account reduction comparison
+    initializePeriodSelectors();
+    
     // Unused services (zero cost)
     const unusedServices = Object.entries(aggregatedData.serviceAggregation)
         .filter(([service, cost]) => cost === 0)

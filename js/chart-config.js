@@ -1284,28 +1284,10 @@ function createAccountServiceTrendConfig(data, accountName, topServicesCount = 5
             sortedServices.push('その他');
         }
 
-        // Generate colors - account total gets a distinct color, services get standard colors
-        const totalColor = CHART_COLORS.accounts[0]; // Use account color for total
+        // Generate colors for services only (no account total line)
         const serviceColors = generateColors(sortedServices.length, 'services');
 
-        // Add account total line (prominent)
-        const totalData = data.monthlyTrends.map(trend => {
-            const monthData = getMonthDataForAccount(data, trend.date, accountName);
-            return Object.values(monthData.services || {})
-                .reduce((sum, cost) => sum + cost, 0);
-        });
-
-        datasets.push({
-            label: `${accountName} 合計`,
-            data: totalData,
-            borderColor: totalColor,
-            backgroundColor: totalColor + '20',
-            borderWidth: 3,
-            pointRadius: 6,
-            pointHoverRadius: 8,
-            tension: 0.3,
-            fill: false
-        });
+        // Skip account total line for individual accounts to improve service breakdown visibility
 
         // Add individual service lines (thinner)
         sortedServices.forEach((service, index) => {
@@ -1327,13 +1309,13 @@ function createAccountServiceTrendConfig(data, accountName, topServicesCount = 5
                 data: serviceData,
                 borderColor: color,
                 backgroundColor: color + '20',
-            borderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            tension: 0.3,
-            fill: false,
-            borderDash: service === 'その他' ? [5, 5] : undefined // Dashed line for "Others"
-        });
+                borderWidth: 3, // Increased from 2 to make service lines more prominent
+                pointRadius: 5, // Increased from 4 for better visibility
+                pointHoverRadius: 7, // Increased from 6
+                tension: 0.3,
+                fill: false,
+                borderDash: service === 'その他' ? [5, 5] : undefined // Dashed line for "Others"
+            });
     });
     }
 

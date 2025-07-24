@@ -2120,4 +2120,51 @@ if (aggregatedData && aggregatedData.dateRange) {
 - **操作一貫性**: 期間指定比較分析と統一的な日付選択UI実現
 - **ユーザビリティ**: 直感的な操作と分析結果の正確性を両立
 
+## 2025-07-24 バグ修正: アカウント別削減効果比較の期間選択初期化問題
+
+### 概要
+アカウント別削減効果比較機能の期間選択ドロップダウンが空で操作不能な問題を修正。分析開始時の初期化処理を追加し、ユーザーが期間を正常に選択できるように改善。
+
+### 実施内容
+
+#### 1. 問題の特定
+**症状**: アカウント別削減効果比較のベース月・対象月ドロップダウンが空で選択肢が表示されない
+**影響**: ユーザーが期間比較機能を利用できない状況
+
+#### 2. 原因分析
+**根本原因**: `initializePeriodSelectors()`関数が分析開始時に実行されていない
+- 既存関数は存在するが、`displayAnalysisResults()`で呼び出されていない
+- カスタム期間選択時のみ実行される設計になっていた
+
+#### 3. 修正実装
+**修正箇所**: `js/app.js:494行`に`initializePeriodSelectors()`呼び出し追加
+
+```javascript
+function displayAnalysisResults() {
+    if (!aggregatedData || !aggregatedData.serviceAggregation) return;
+    
+    // Initialize period selectors for account reduction comparison
+    initializePeriodSelectors();
+    
+    // 既存処理...
+}
+```
+
+### 修正効果
+- **期間選択復旧**: ドロップダウンに全期間（2025-01～2025-06）が正常表示
+- **デフォルト値設定**: 前月（05月）・最新月（06月）が自動選択
+- **機能完全復旧**: 期間変更・比較実行が正常動作
+- **ユーザビリティ向上**: 直感的な期間選択操作が可能
+
+### 変更ファイル  
+- **`js/app.js`**: 期間選択初期化処理追加（3行追加）
+
+### 検証・テスト
+- **Playwright E2E検証**: 期間選択・変更・比較実行の全フロー確認完了
+- **動作確認**: 2025年01月→06月比較で-25.9%削減効果表示確認
+- **UI確認**: テーブルヘッダーの期間表示も正常更新確認
+
+### Git操作
+- **コミット**: `bf581b0` - Fix account reduction comparison period selection initialization
+
 最終更新: 2025-07-24

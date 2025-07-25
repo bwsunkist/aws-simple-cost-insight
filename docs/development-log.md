@@ -51,6 +51,130 @@ Issue #010「サービス横断推移分析のチャートheightが非常に小�
 
 ---
 
+## 2025-07-25 複数サービス選択機能実装: サービス横断推移分析の拡張
+
+### 概要
+サービス横断推移分析に複数サービス選択機能を追加実装。単一選択モードと複数選択モードの両方に対応し、柔軟な分析環境を提供。
+
+### 実施内容
+
+#### 1. 機能仕様設計
+**要求**: 既存の単一サービス分析に加え、複数サービスの全アカウント合計分析機能追加
+**アプローチ**: B. 既存セクション拡張案を採用（ユーザー明示的選択）
+**設計方針**: 
+- 単一選択: アカウント別推移比較（従来機能維持）
+- 複数選択: サービス別月次比較（新機能）
+
+#### 2. HTML構造拡張実装
+**修正ファイル**: `index.html`
+**追加要素**:
+- 選択モード切り替えラジオボタン（単一選択/複数選択）
+- 複数選択コントロールボタン（全選択/全解除）
+- 選択状況動的表示エリア
+- ガイドテキスト動的更新機能
+
+#### 3. CSS設計・実装
+**修正ファイル**: `css/style.css`
+**追加スタイル**（197行追加）:
+```css
+/* 選択モード切り替え */
+.selection-mode-toggle, .mode-option
+/* 複数選択コントロール */
+.multi-service-controls, .control-button
+/* チェックボックススタイル */
+.service-row.multi-select::before, ::after
+/* 複数サービステーブル */
+.multi-service-table
+/* レスポンシブ対応 */
+@media (max-width: 768px)
+```
+
+#### 4. JavaScript状態管理実装
+**修正ファイル**: `js/app.js`
+**追加機能**:
+- **状態変数**: `multiSelectedServices = new Set()`, `selectionMode = 'single'`
+- **モード切り替え**: `setupSelectionModeToggle()` 関数
+- **一括操作**: `setupMultiServiceControls()` 関数
+- **選択処理**: `handleServiceRowClick()` 拡張（単一/複数対応）
+- **UI更新**: `updateServiceRowSelection()`, `updateSelectionStatus()` 拡張
+
+#### 5. データ処理機能実装
+**新規関数**:
+- `calculateMultiServiceAnalysis()`: 複数サービス分析データ処理
+- `displayMultiServiceAnalysisResults()`: テーブル表示処理
+- `updateMultiServiceAnalysisChart()`: チャート描画処理
+- `handleMultiServiceAnalysis()`: 統合処理
+
+**データ構造**:
+```javascript
+{
+  services: ['EC2', 'S3', 'RDS'],
+  chartData: Chart.js設定,
+  monthlyBreakdown: 月次詳細データ,
+  serviceTotals: サービス別合計,
+  grandTotal: 総合計
+}
+```
+
+#### 6. Chart.js設定実装
+**修正ファイル**: `js/chart-config.js`
+**新規関数**: `createMultiServiceChartConfig()`
+**特徴**:
+- 複数サービス個別線グラフ + 合計線（破線）
+- 動的色生成・凡例・ツールチップ対応
+- 複数アカウント統合データ可視化
+
+#### 7. ユーザーマニュアル更新
+**修正ファイル**: `USER_MANUAL.md`
+**更新内容**:
+- セクション5.7「サービス横断推移分析」完全リライト
+- 単一選択モード/複数選択モード分離記載
+- 操作方法・活用例・利用シーンの詳細化
+- 複数選択テーブル表示例の追加
+
+#### 8. E2E動作検証
+**検証ツール**: Playwright MCP
+**検証シナリオ**:
+- ✅ 単一→複数選択モード切り替え
+- ✅ EC2単独選択（1個選択中）
+- ✅ EC2+S3複数選択（2個選択中）
+- ✅ 全選択実行（7個選択中）
+- ✅ 全解除実行（選択クリア）
+- ✅ 複数→単一選択モード切り替え
+
+**検証結果**: 全機能正常動作確認、UI/UX良好
+
+### 技術的決定・変更履歴
+
+#### アーキテクチャ設計
+- **状態管理**: Set()による重複排除と効率的選択管理
+- **モード切り替え**: ラジオボタンによる明確なUI操作
+- **データ構造**: 全アカウント統合によるサービス間比較最適化
+
+#### UI/UX設計
+- **視覚的フィードバック**: チェックマーク（✓）による選択状態表示
+- **一括操作**: 全選択/全解除による操作効率化
+- **動的更新**: リアルタイム選択状況・結果表示
+
+#### パフォーマンス最適化
+- **イベント処理**: 効率的なDOMクエリとイベントリスナー設定
+- **データ処理**: 月次データの最適化とキャッシュ活用
+- **レンダリング**: Chart.js インスタンス適切な破棄・再生成
+
+### 作成・更新ファイル
+- **`index.html`**: HTML構造拡張（選択UI追加）
+- **`css/style.css`**: 複数選択対応CSS（197行追加）
+- **`js/app.js`**: 状態管理・イベント処理・データ分析機能
+- **`js/chart-config.js`**: 複数サービス用Chart.js設定
+- **`USER_MANUAL.md`**: ユーザーマニュアル更新（機能説明拡充）
+
+### Git操作履歴
+- **コミット**: `d955dca` - "Add multi-service selection support for service cross-analysis"
+- **変更統計**: 5 files changed, 813 insertions(+), 194 deletions(-)
+- **実装範囲**: HTML構造、CSS設計、JavaScript機能、Chart.js設定、ドキュメント
+
+---
+
 ## 2025-07-24 機能削除: 期間指定比較分析の冗長機能削除
 
 ### 概要

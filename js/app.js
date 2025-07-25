@@ -1620,13 +1620,29 @@ function initializeStatisticalAnalysis() {
 }
 
 /**
- * Initialize service cross-analysis controls
+ * Initialize service cross-analysis controls (new 2-pane UI)
  */
 function initializeServiceCrossAnalysis() {
-    if (!elements.serviceSelect || !aggregatedData) return;
+    // Populate the new service selection list
+    populateServiceSelectionList();
     
-    // Get all unique services from all accounts
-    const allServices = new Set();
+    // Initialize selection status
+    updateSelectionStatus();
+    
+    // Clear previous results
+    clearServiceCrossAnalysisResults();
+}
+
+/**
+ * Populate service selection list (new 2-pane UI)
+ */
+function populateServiceSelectionList() {
+    const serviceListContainer = document.getElementById('serviceSelectionList');
+    if (!serviceListContainer || !registeredAccounts.length) return;
+    
+    // Get all unique services with total costs
+    const serviceData = new Map();
+    
     registeredAccounts.forEach(account => {
         if (account.data && account.data.monthlyData) {
             account.data.monthlyData.forEach(monthData => {
@@ -1634,28 +1650,99 @@ function initializeServiceCrossAnalysis() {
                 const nonServiceKeys = ['date', 'period', 'totalCost', 'summary', 'month', 'year'];
                 Object.keys(monthData).forEach(key => {
                     if (!nonServiceKeys.includes(key) && typeof monthData[key] === 'number') {
-                        allServices.add(key);
+                        const currentTotal = serviceData.get(key) || 0;
+                        serviceData.set(key, currentTotal + monthData[key]);
                     }
                 });
             });
         }
     });
     
-    // Sort services alphabetically
-    const sortedServices = Array.from(allServices).sort();
+    // Sort services by total cost (descending)
+    const sortedServices = Array.from(serviceData.entries())
+        .sort((a, b) => b[1] - a[1]);
     
-    // Generate service options
-    const options = ['<option value="">サービスを選択してください</option>'];
-    sortedServices.forEach(service => {
-        options.push(`<option value="${escapeHtml(service)}">${escapeHtml(service)}</option>`);
-    });
+    // Generate service rows
+    const rows = sortedServices.map(([service, totalCost]) => {
+        return `
+            <div class="service-row" data-service="${escapeHtml(service)}">
+                <span class="service-icon">○</span>
+                <span class="service-name">${escapeHtml(service)}</span>
+                <span class="service-cost">$${formatCurrency(totalCost)}</span>
+            </div>
+        `;
+    }).join('');
     
-    elements.serviceSelect.innerHTML = options.join('');
-    validateServiceSelection();
+    serviceListContainer.innerHTML = rows;
+    
+    // Add click event listeners to service rows
+    serviceListContainer.addEventListener('click', handleServiceRowClick);
+}
+
+// Track selected service for new UI
+let selectedService = null;
+
+/**
+ * Handle service row click event
+ */
+function handleServiceRowClick(event) {
+    const serviceRow = event.target.closest('.service-row');
+    if (!serviceRow) return;
+    
+    const serviceName = serviceRow.dataset.service;
+    
+    // Toggle selection
+    if (selectedService === serviceName) {
+        // Deselect current service
+        selectedService = null;
+        clearServiceCrossAnalysisResults();
+    } else {
+        // Select new service
+        selectedService = serviceName;
+        handleServiceCrossAnalysis();
+    }
+    
+    // Update UI
+    updateServiceRowSelection();
+    updateSelectionStatus();
 }
 
 /**
- * Validate service selection and auto-execute analysis
+ * Update service row selection visual state
+ */
+function updateServiceRowSelection() {
+    const serviceRows = document.querySelectorAll('.service-row');
+    
+    serviceRows.forEach(row => {
+        const serviceName = row.dataset.service;
+        const icon = row.querySelector('.service-icon');
+        
+        if (serviceName === selectedService) {
+            row.classList.add('selected');
+            icon.textContent = '●';
+        } else {
+            row.classList.remove('selected');
+            icon.textContent = '○';
+        }
+    });
+}
+
+/**
+ * Update selection status display
+ */
+function updateSelectionStatus() {
+    const statusElement = document.getElementById('selectionStatus');
+    if (!statusElement) return;
+    
+    if (selectedService) {
+        statusElement.textContent = `${selectedService} 選択中`;
+    } else {
+        statusElement.textContent = 'サービスを選択してください';
+    }
+}
+
+/**
+ * Validate service selection and auto-execute analysis (legacy function)
  */
 function validateServiceSelection() {
     if (!elements.serviceSelect || !elements.executeServiceAnalysis) return;
@@ -1675,43 +1762,153 @@ function validateServiceSelection() {
 }
 
 /**
- * Handle service cross-analysis execution
+ * Handle service cross-analysis execution (updated for new UI)
  */
 function handleServiceCrossAnalysis() {
-    const selectedService = elements.serviceSelect.value;
+    // Use global selectedService variable instead of dropdown
     if (!selectedService || !registeredAccounts.length) {
         showMessage('サービスを選択してください', 'error');
         return;
     }
     
     try {
-        // Show loading state
-        elements.executeServiceAnalysis.disabled = true;
-        elements.executeServiceAnalysis.textContent = '分析中...';
-        
         console.log('Analyzing service:', selectedService);
         
-        // Calculate service cross-analysis data
-        const analysisData = calculateServiceCrossAnalysis(selectedService);
+        // Calculate service account analysis data
+        const analysisData = calculateServiceAccountAnalysis(selectedService);
         
-        // Display results
-        displayServiceCrossAnalysisResults(analysisData, selectedService);
-        updateServiceCrossAnalysisChart(analysisData, selectedService);
+        // Display results in new UI format
+        displayServiceAccountAnalysisResults(analysisData, selectedService);
+        updateServiceAccountAnalysisChart(analysisData, selectedService);
         
         showMessage(`${selectedService}の横断分析が完了しました`, 'success');
         
     } catch (error) {
         console.error('Error in service cross-analysis:', error);
         showMessage(`サービス分析エラー: ${error.message}`, 'error');
-    } finally {
-        // Reset button state
-        elements.executeServiceAnalysis.disabled = false;
-        elements.executeServiceAnalysis.textContent = '分析実行';
     }
 }
 
 /**
- * Calculate service cross-analysis data
+ * Calculate service account analysis data for new 2-pane UI
+ * @param {string} selectedService - The selected service to analyze
+ * @returns {Object} Analysis data with account breakdown and chart data
+ */
+function calculateServiceAccountAnalysis(selectedService) {
+    const accountsData = [];
+    const chartData = {
+        labels: [],
+        datasets: []
+    };
+    
+    // Get unique months from all accounts
+    const allMonths = new Set();
+    registeredAccounts.forEach(account => {
+        if (account.data && account.data.monthlyData) {
+            account.data.monthlyData.forEach(monthData => {
+                if (monthData.date) {
+                    allMonths.add(monthData.date);
+                }
+            });
+        }
+    });
+    
+    // Sort months chronologically
+    const sortedMonths = Array.from(allMonths).sort();
+    chartData.labels = sortedMonths.map(date => {
+        const monthMatch = date.match(/(\d{4})-(\d{2})/);
+        if (monthMatch) {
+            return `${monthMatch[1]}/${monthMatch[2]}`;
+        }
+        return date;
+    });
+    
+    // Process each account
+    let totalByMonth = new Array(sortedMonths.length).fill(0);
+    
+    registeredAccounts.forEach((account, accountIndex) => {
+        if (!account.data || !account.data.monthlyData) return;
+        
+        const accountData = {
+            accountName: account.name,
+            monthlyData: [],
+            totalCost: 0,
+            averageCost: 0,
+            trend: 'stable'
+        };
+        
+        // Create monthly data array aligned with sorted months
+        const monthlyValues = sortedMonths.map(targetMonth => {
+            const monthData = account.data.monthlyData.find(data => data.date === targetMonth);
+            const serviceCost = monthData ? (monthData[selectedService] || 0) : 0;
+            
+            accountData.monthlyData.push({
+                date: targetMonth,
+                cost: serviceCost
+            });
+            
+            return serviceCost;
+        });
+        
+        // Calculate account totals and trend
+        accountData.totalCost = monthlyValues.reduce((sum, cost) => sum + cost, 0);
+        accountData.averageCost = accountData.totalCost / monthlyValues.length;
+        
+        // Calculate trend (simple: compare first and last month)
+        if (monthlyValues.length >= 2) {
+            const firstMonth = monthlyValues[0];
+            const lastMonth = monthlyValues[monthlyValues.length - 1];
+            if (lastMonth > firstMonth * 1.1) {
+                accountData.trend = 'increasing';
+            } else if (lastMonth < firstMonth * 0.9) {
+                accountData.trend = 'decreasing';
+            }
+        }
+        
+        accountsData.push(accountData);
+        
+        // Add to chart datasets
+        const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+        const color = colors[accountIndex % colors.length];
+        
+        chartData.datasets.push({
+            label: account.name,
+            data: monthlyValues,
+            borderColor: color,
+            backgroundColor: color,
+            borderWidth: 2,
+            fill: false,
+            tension: 0.1
+        });
+        
+        // Update total by month
+        monthlyValues.forEach((value, index) => {
+            totalByMonth[index] += value;
+        });
+    });
+    
+    // Add total line to chart
+    chartData.datasets.push({
+        label: '合計',
+        data: totalByMonth,
+        borderColor: '#059669',
+        backgroundColor: '#059669',
+        borderWidth: 3,
+        fill: false,
+        tension: 0.1,
+        borderDash: [5, 5]
+    });
+    
+    return {
+        accounts: accountsData,
+        chartData: chartData,
+        selectedService: selectedService,
+        totalByMonth: totalByMonth
+    };
+}
+
+/**
+ * Calculate service cross-analysis data (legacy function)
  * @param {string} selectedService - The selected service to analyze
  * @returns {Array} Analysis data for each account
  */
@@ -1763,7 +1960,180 @@ function calculateServiceCrossAnalysis(selectedService) {
 }
 
 /**
- * Display service cross-analysis results
+ * Calculate service account analysis data (for new 2-pane UI)
+ * @param {string} selectedService - The selected service to analyze
+ * @returns {Object} Analysis data with account breakdown and monthly details
+ */
+function calculateServiceAccountAnalysis(selectedService) {
+    const accountData = {};
+    const monthlyLabels = [];
+    const allMonths = new Set();
+    
+    // Collect all unique months
+    registeredAccounts.forEach(account => {
+        if (!account.data || !account.data.monthlyData) return;
+        
+        account.data.monthlyData.forEach(monthData => {
+            if (monthData.date) {
+                allMonths.add(monthData.date);
+            }
+        });
+    });
+    
+    // Sort months chronologically
+    const sortedMonths = Array.from(allMonths).sort();
+    
+    // Process each account
+    registeredAccounts.forEach(account => {
+        if (!account.data || !account.data.monthlyData) return;
+        
+        const accountMonthlyData = [];
+        let totalCost = 0;
+        
+        // Create monthly data array for this account
+        sortedMonths.forEach(month => {
+            const monthRecord = account.data.monthlyData.find(m => m.date === month);
+            const serviceCost = monthRecord ? (monthRecord[selectedService] || 0) : 0;
+            
+            accountMonthlyData.push({
+                month: month,
+                cost: serviceCost
+            });
+            
+            totalCost += serviceCost;
+        });
+        
+        // Calculate trend
+        let trend = '➡️'; // default stable
+        if (accountMonthlyData.length >= 2) {
+            const firstCost = accountMonthlyData[0].cost;
+            const lastCost = accountMonthlyData[accountMonthlyData.length - 1].cost;
+            
+            if (firstCost > 0) {
+                const change = ((lastCost - firstCost) / firstCost) * 100;
+                if (change > 10) trend = '📈';
+                else if (change < -10) trend = '📉';
+            }
+        }
+        
+        accountData[account.name] = {
+            monthlyData: accountMonthlyData,
+            totalCost: totalCost,
+            averageCost: totalCost / sortedMonths.length,
+            trend: trend
+        };
+    });
+    
+    // Calculate total across all accounts
+    const totalMonthlyData = sortedMonths.map(month => {
+        let monthTotal = 0;
+        Object.values(accountData).forEach(account => {
+            const monthRecord = account.monthlyData.find(m => m.month === month);
+            if (monthRecord) monthTotal += monthRecord.cost;
+        });
+        return {
+            month: month,
+            cost: monthTotal
+        };
+    });
+    
+    return {
+        accounts: accountData,
+        months: sortedMonths,
+        totalData: totalMonthlyData,
+        serviceName: selectedService
+    };
+}
+
+/**
+ * Display service account analysis results (for new 2-pane UI)
+ * @param {Object} analysisData - Analysis data with account breakdown
+ * @param {string} selectedService - The selected service name
+ */
+/**
+ * Display service account analysis results (new 2-pane UI)
+ */
+function displayServiceAccountAnalysisResults(analysisData, selectedService) {
+    const resultsContainer = document.getElementById('serviceCrossAnalysisResults');
+    if (!resultsContainer || !analysisData || !analysisData.accounts) return;
+    
+    const accountsList = analysisData.accounts;
+    const chartLabels = analysisData.chartData.labels;
+    
+    // Create detailed monthly breakdown table
+    let tableRows = chartLabels.map((monthLabel, index) => {
+        let row = `<tr><td>${monthLabel}</td>`;
+        
+        // Add cost for each account
+        accountsList.forEach(account => {
+            const cost = account.monthlyData[index] ? account.monthlyData[index].cost : 0;
+            row += `<td>${formatCurrency(cost)}</td>`;
+        });
+        
+        // Add total column
+        const total = analysisData.totalByMonth[index];
+        row += `<td><strong>${formatCurrency(total)}</strong></td></tr>`;
+        
+        return row;
+    }).join('');
+    
+    // Create summary row with totals
+    let summaryRow = '<tr class="summary-row"><td><strong>合計</strong></td>';
+    accountsList.forEach(account => {
+        summaryRow += `<td><strong>${formatCurrency(account.totalCost)}</strong></td>`;
+    });
+    
+    const grandTotal = accountsList.reduce((sum, account) => sum + account.totalCost, 0);
+    summaryRow += `<td><strong>${formatCurrency(grandTotal)}</strong></td></tr>`;
+    
+    // Generate table headers
+    let headers = '<tr><th>月</th>';
+    accountsList.forEach(account => {
+        headers += `<th>${escapeHtml(account.accountName)}</th>`;
+    });
+    headers += '<th>合計</th></tr>';
+    
+    const tableHTML = `
+        <h4>${escapeHtml(selectedService)} サービス - アカウント別月次推移</h4>
+        <table class="service-account-table">
+            <thead>${headers}</thead>
+            <tbody>
+                ${tableRows}
+                ${summaryRow}
+            </tbody>
+        </table>
+    `;
+    
+    resultsContainer.innerHTML = tableHTML;
+}
+
+/**
+ * Update service account analysis chart (for new 2-pane UI)
+ * @param {Object} analysisData - Analysis data with account breakdown
+ * @param {string} selectedService - The selected service name
+ */
+function updateServiceAccountAnalysisChart(analysisData, selectedService) {
+    const chartContainer = document.querySelector('#serviceCrossAnalysisChart');
+    if (!chartContainer || !analysisData) return;
+    
+    // Clear existing chart
+    if (chartInstances.serviceCrossAnalysis) {
+        chartInstances.serviceCrossAnalysis.destroy();
+    }
+    
+    // Create chart configuration for account breakdown
+    const config = createServiceAccountChartConfig(analysisData, selectedService);
+    
+    // Create new chart
+    const canvas = chartContainer.querySelector('canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        chartInstances.serviceCrossAnalysis = new Chart(ctx, config);
+    }
+}
+
+/**
+ * Display service cross-analysis results (legacy function)
  * @param {Array} analysisData - Analysis data for each account
  * @param {string} selectedService - The selected service name
  */

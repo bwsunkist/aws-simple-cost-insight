@@ -302,22 +302,32 @@
                     </div>
                     <div class="analysis-card full-width">
                         <h3>サービス横断推移分析</h3>
-                        <div class="service-cross-analysis-controls">
-                            <div class="service-selection-group">
-                                <label for="serviceSelect">対象サービス:</label>
-                                <select id="serviceSelect" class="service-select">
-                                    <option value="">サービスを選択してください</option>
-                                    <!-- 動的に生成 -->
-                                </select>
-                                <span class="auto-analysis-note">💡 サービス選択で自動分析</span>
-                                <button id="executeServiceAnalysis" class="service-analysis-btn" style="display: none;" disabled>分析実行</button>
+                        <div class="service-cross-analysis-container">
+                            <!-- 左ペイン: サービス選択 -->
+                            <div class="service-selection-pane">
+                                <div class="service-list-header">
+                                    <h4>サービス一覧</h4>
+                                    <div class="selection-status">
+                                        <span id="selectionStatus">サービスを選択してください</span>
+                                    </div>
+                                </div>
+                                <div id="serviceSelectionList" class="service-selection-list">
+                                    <!-- 動的に生成されるサービス行 -->
+                                </div>
+                                <div class="selection-guide">
+                                    <span class="guide-text">💡 クリックで選択切り替え</span>
+                                </div>
                             </div>
-                        </div>
-                        <div id="serviceCrossAnalysisChart" class="chart-container">
-                            <canvas></canvas>
-                        </div>
-                        <div id="serviceCrossAnalysisResults" class="analysis-content">
-                            <!-- 動的に生成 -->
+                            
+                            <!-- 右ペイン: 分析結果 -->
+                            <div class="service-analysis-pane">
+                                <div id="serviceCrossAnalysisChart" class="chart-container">
+                                    <canvas></canvas>
+                                </div>
+                                <div id="serviceCrossAnalysisResults" class="analysis-content">
+                                    <!-- 動的に生成される詳細テーブル -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="analysis-card full-width">

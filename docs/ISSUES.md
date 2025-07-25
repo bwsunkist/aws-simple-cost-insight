@@ -14,6 +14,7 @@
 | #008 | データ分析でTypeError発生 | High | Fixed | 2025-07-22 | 2025-07-22 |
 | #009 | アカウント別削減効果比較の期間選択ドロップダウンが空 | High | Fixed | 2025-07-24 | 2025-07-24 |
 | #010 | サービス横断推移分析のチャートheightが非常に小さい | High | Fixed | 2025-07-24 | 2025-07-24 |
+| #011 | サービス横断推移分析の自動分析で無限ループ発生 | High | Fixed | 2025-07-25 | 2025-07-25 |
 
 ---
 
@@ -473,18 +474,18 @@ Error analyzing data: TypeError: Cannot convert undefined or null to object
 ### ステータス別
 - **Open**: 1件
 - **In Progress**: 0件
-- **Fixed**: 6件
+- **Fixed**: 7件
 - **Verified**: 0件
 
 ### 重要度別
 - **Critical**: 0件（1件→Fixed）
-- **High**: 6件（5件→Fixed, 1件Open）
+- **High**: 7件（6件→Fixed, 1件Open）
 - **Medium**: 0件
 - **Low**: 0件
 
 ### 発見方法別
 - **Playwright E2E検証**: 5件
-- **ユーザーフィードバック**: 1件
+- **ユーザーフィードバック**: 3件
 - **Unit Tests**: 0件
 - **Manual Testing**: 0件
 
@@ -654,3 +655,80 @@ function displayAnalysisResults() {
 - **他チャート比較**: 月次コスト推移チャート（446px）との比較で適切な高さを確認
 
 *修正完了: 2025-07-24*
+
+### #011: サービス横断推移分析の自動分析で無限ループ発生
+
+#### 基本情報
+- **発見日**: 2025-07-25
+- **重要度**: High
+- **ステータス**: Fixed
+- **修正日**: 2025-07-25
+- **発見者**: ユーザーフィードバック
+
+#### 症状詳細
+**期待動作**: サービス選択時に自動分析が1回実行され、結果が表示される
+**実際動作**: サービス選択後に無限ループが発生し、ブラウザがフリーズする
+**コンソール症状**: `console.log('Analyzing service:', selectedService);` が連続で大量出力される
+
+#### 再現手順
+1. アカウントデータを登録して「データ分析開始」を実行
+2. 「サービス横断推移分析」セクションまでスクロール
+3. サービス（例：EC2）をドロップダウンから選択
+4. 自動分析が開始される
+5. ブラウザコンソールで `console.log('Analyzing service:')` が連続表示
+6. ブラウザがフリーズして操作不能になる
+
+#### 環境情報
+- **機能**: サービス横断推移分析の自動分析機能
+- **対象関数**: `validateServiceSelection()`, `handleServiceCrossAnalysis()`
+- **発生条件**: UX改善実装後（分析ボタン削除、自動分析導入）
+- **影響範囲**: サービス選択機能全体
+
+#### 根本原因分析
+**無限ループの流れ**:
+1. `validateServiceSelection()` → `handleServiceCrossAnalysis()`を呼び出し
+2. `handleServiceCrossAnalysis()`のfinallyブロック → `validateServiceSelection()`を再度呼び出し
+3. 1に戻って無限ループ継続
+
+**問題箇所**: `js/app.js:1710行目`
+```javascript
+} finally {
+    // Reset button state
+    elements.executeServiceAnalysis.disabled = false;
+    elements.executeServiceAnalysis.textContent = '分析実行';
+    validateServiceSelection(); // ← この行が無限ループの原因
+}
+```
+
+#### 修正内容
+**修正ファイル**: `js/app.js:1710行目`
+**修正内容**: `finally`ブロックから再帰的な`validateServiceSelection()`呼び出しを削除
+
+```javascript
+// 修正前（無限ループ）
+} finally {
+    elements.executeServiceAnalysis.disabled = false;
+    elements.executeServiceAnalysis.textContent = '分析実行';
+    validateServiceSelection(); // ← 削除
+}
+
+// 修正後（正常動作）
+} finally {
+    elements.executeServiceAnalysis.disabled = false;
+    elements.executeServiceAnalysis.textContent = '分析実行';
+}
+```
+
+#### 修正効果・検証結果
+- **無限ループ解消**: サービス選択時の分析が1回のみ実行
+- **コンソール正常化**: `console.log('Analyzing service:')` が1回のみ出力
+- **ブラウザ安定性**: フリーズ現象完全解消
+- **機能動作**: 自動分析機能は正常に動作継続
+
+#### 技術的学習・予防策
+- **自動実行関数**: 再帰呼び出しを避ける設計の重要性
+- **UX改善時**: 既存の処理フローへの影響を慎重に確認
+- **エラーハンドリング**: `finally`ブロックでの不要な再実行を避ける
+- **デバッグ**: 無限ループはコンソールログで早期発見可能
+
+*修正完了: 2025-07-25*

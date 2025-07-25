@@ -1,5 +1,56 @@
 # 開発ログ
 
+## 2025-07-24 Issue修正 + ドキュメント更新: サービス横断推移分析チャート高さ問題解決
+
+### 概要
+Issue #010「サービス横断推移分析のチャートheightが非常に小さい」問題を解決し、包括的開発ワークフローに従ってドキュメント更新を実施。
+
+### 実施内容
+
+#### 1. 問題発見・分析
+**問題**: サービス横断推移分析チャートの高さが150pxと非常に小さく、視認性が悪い
+**根本原因**: `.analysis-card`コンテナ内のチャートが通常の`.chart-container`と異なるCSS設定
+
+#### 2. 技術的解決
+**修正ファイル**: `css/style.css`
+**修正内容**: 分析カード内チャートコンテナ用CSSルール追加
+```css
+.analysis-card .chart-container {
+    height: 450px;
+    min-height: 450px;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+```
+
+#### 3. 検証・確認
+**E2E検証**: Playwright検証で改善確認
+- **修正前**: 150px height（非常に小さい）
+- **修正後**: 400px height（適切なサイズ）  
+- **改善効果**: 167%の高さ増加、視認性大幅向上
+
+#### 4. ドキュメント更新
+**USER_MANUAL.md**: サービス横断推移分析セクション5.7追加
+- 設定方法・表示内容・活用例・利用シーンの詳細記載
+- 機能一覧への項目追加
+
+**docs/ISSUES.md**: Issue #010詳細記録・修正完了記録
+- 問題詳細・根本原因・修正内容・検証結果の完全記録
+
+### 技術的決定・変更履歴
+- **CSS設計**: 分析カード内チャートの標準化によりUI一貫性確保
+- **高さ統一**: 450px設定により他チャートとの視覚的一貫性実現
+- **E2E検証体制**: 包括的開発ワークフロー導入により品質向上
+
+### Git操作履歴
+- **コミット**: `8978a27` - "Fix service cross-analysis chart height issue and update documentation"
+- **変更ファイル**: css/style.css, USER_MANUAL.md, docs/ISSUES.md, index.html, js/app.js, js/chart-config.js
+
+---
+
 ## 2025-07-24 機能削除: 期間指定比較分析の冗長機能削除
 
 ### 概要

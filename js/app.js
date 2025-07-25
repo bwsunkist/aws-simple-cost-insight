@@ -191,6 +191,12 @@ function setupEventListeners() {
     if (elements.compareEndDate) {
         elements.compareEndDate.addEventListener('change', validateStatisticalPeriods);
     }
+    
+    // Service selection mode toggle
+    setupSelectionModeToggle();
+    
+    // Multi-service control buttons
+    setupMultiServiceControls();
 }
 
 /**
@@ -1682,8 +1688,12 @@ function populateServiceSelectionList() {
 // Track selected service for new UI
 let selectedService = null;
 
+// Track multiple selected services and selection mode
+let multiSelectedServices = new Set();
+let selectionMode = 'single'; // 'single' or 'multiple'
+
 /**
- * Handle service row click event
+ * Handle service row click event (updated for single/multiple selection)
  */
 function handleServiceRowClick(event) {
     const serviceRow = event.target.closest('.service-row');
@@ -1691,15 +1701,33 @@ function handleServiceRowClick(event) {
     
     const serviceName = serviceRow.dataset.service;
     
-    // Toggle selection
-    if (selectedService === serviceName) {
-        // Deselect current service
-        selectedService = null;
-        clearServiceCrossAnalysisResults();
+    if (selectionMode === 'single') {
+        // Single selection mode
+        if (selectedService === serviceName) {
+            // Deselect current service
+            selectedService = null;
+            clearServiceCrossAnalysisResults();
+        } else {
+            // Select new service
+            selectedService = serviceName;
+            handleServiceCrossAnalysis();
+        }
     } else {
-        // Select new service
-        selectedService = serviceName;
-        handleServiceCrossAnalysis();
+        // Multiple selection mode
+        if (multiSelectedServices.has(serviceName)) {
+            // Deselect service
+            multiSelectedServices.delete(serviceName);
+        } else {
+            // Select service
+            multiSelectedServices.add(serviceName);
+        }
+        
+        // Handle multi-service analysis
+        if (multiSelectedServices.size > 0) {
+            handleMultiServiceAnalysis();
+        } else {
+            clearServiceCrossAnalysisResults();
+        }
     }
     
     // Update UI
@@ -1708,7 +1736,7 @@ function handleServiceRowClick(event) {
 }
 
 /**
- * Update service row selection visual state
+ * Update service row selection visual state (updated for single/multiple selection)
  */
 function updateServiceRowSelection() {
     const serviceRows = document.querySelectorAll('.service-row');
@@ -1717,27 +1745,58 @@ function updateServiceRowSelection() {
         const serviceName = row.dataset.service;
         const icon = row.querySelector('.service-icon');
         
-        if (serviceName === selectedService) {
-            row.classList.add('selected');
-            icon.textContent = '●';
+        // Remove existing classes
+        row.classList.remove('selected', 'multi-select');
+        
+        if (selectionMode === 'single') {
+            // Single selection mode
+            if (serviceName === selectedService) {
+                row.classList.add('selected');
+                icon.textContent = '●';
+            } else {
+                icon.textContent = '○';
+            }
         } else {
-            row.classList.remove('selected');
-            icon.textContent = '○';
+            // Multiple selection mode
+            row.classList.add('multi-select');
+            if (multiSelectedServices.has(serviceName)) {
+                row.classList.add('selected');
+            }
+            // Icon is handled by CSS in multi-select mode
+            icon.style.display = 'none';
         }
     });
 }
 
 /**
- * Update selection status display
+ * Update selection status display (updated for single/multiple selection)
  */
 function updateSelectionStatus() {
     const statusElement = document.getElementById('selectionStatus');
     if (!statusElement) return;
     
-    if (selectedService) {
-        statusElement.textContent = `${selectedService} 選択中`;
+    // Remove existing classes
+    statusElement.classList.remove('multi-mode');
+    statusElement.innerHTML = '';
+    
+    if (selectionMode === 'single') {
+        // Single selection mode
+        if (selectedService) {
+            statusElement.textContent = `${selectedService} 選択中`;
+        } else {
+            statusElement.textContent = 'サービスを選択してください';
+        }
     } else {
-        statusElement.textContent = 'サービスを選択してください';
+        // Multiple selection mode
+        statusElement.classList.add('multi-mode');
+        const count = multiSelectedServices.size;
+        
+        if (count === 0) {
+            statusElement.textContent = 'サービスを選択してください';
+        } else {
+            const serviceNames = Array.from(multiSelectedServices).join(', ');
+            statusElement.innerHTML = `${serviceNames}<span class="selection-count">${count}個選択中</span>`;
+        }
     }
 }
 
@@ -1960,92 +2019,6 @@ function calculateServiceCrossAnalysis(selectedService) {
 }
 
 /**
- * Calculate service account analysis data (for new 2-pane UI)
- * @param {string} selectedService - The selected service to analyze
- * @returns {Object} Analysis data with account breakdown and monthly details
- */
-function calculateServiceAccountAnalysis(selectedService) {
-    const accountData = {};
-    const monthlyLabels = [];
-    const allMonths = new Set();
-    
-    // Collect all unique months
-    registeredAccounts.forEach(account => {
-        if (!account.data || !account.data.monthlyData) return;
-        
-        account.data.monthlyData.forEach(monthData => {
-            if (monthData.date) {
-                allMonths.add(monthData.date);
-            }
-        });
-    });
-    
-    // Sort months chronologically
-    const sortedMonths = Array.from(allMonths).sort();
-    
-    // Process each account
-    registeredAccounts.forEach(account => {
-        if (!account.data || !account.data.monthlyData) return;
-        
-        const accountMonthlyData = [];
-        let totalCost = 0;
-        
-        // Create monthly data array for this account
-        sortedMonths.forEach(month => {
-            const monthRecord = account.data.monthlyData.find(m => m.date === month);
-            const serviceCost = monthRecord ? (monthRecord[selectedService] || 0) : 0;
-            
-            accountMonthlyData.push({
-                month: month,
-                cost: serviceCost
-            });
-            
-            totalCost += serviceCost;
-        });
-        
-        // Calculate trend
-        let trend = '➡️'; // default stable
-        if (accountMonthlyData.length >= 2) {
-            const firstCost = accountMonthlyData[0].cost;
-            const lastCost = accountMonthlyData[accountMonthlyData.length - 1].cost;
-            
-            if (firstCost > 0) {
-                const change = ((lastCost - firstCost) / firstCost) * 100;
-                if (change > 10) trend = '📈';
-                else if (change < -10) trend = '📉';
-            }
-        }
-        
-        accountData[account.name] = {
-            monthlyData: accountMonthlyData,
-            totalCost: totalCost,
-            averageCost: totalCost / sortedMonths.length,
-            trend: trend
-        };
-    });
-    
-    // Calculate total across all accounts
-    const totalMonthlyData = sortedMonths.map(month => {
-        let monthTotal = 0;
-        Object.values(accountData).forEach(account => {
-            const monthRecord = account.monthlyData.find(m => m.month === month);
-            if (monthRecord) monthTotal += monthRecord.cost;
-        });
-        return {
-            month: month,
-            cost: monthTotal
-        };
-    });
-    
-    return {
-        accounts: accountData,
-        months: sortedMonths,
-        totalData: totalMonthlyData,
-        serviceName: selectedService
-    };
-}
-
-/**
  * Display service account analysis results (for new 2-pane UI)
  * @param {Object} analysisData - Analysis data with account breakdown
  * @param {string} selectedService - The selected service name
@@ -2204,6 +2177,324 @@ function clearServiceCrossAnalysisResults() {
     // Clear results table
     if (elements.serviceCrossAnalysisResults) {
         elements.serviceCrossAnalysisResults.innerHTML = '';
+    }
+}
+
+/**
+ * Setup selection mode toggle event listeners
+ */
+function setupSelectionModeToggle() {
+    const modeRadios = document.querySelectorAll('input[name="selectionMode"]');
+    const multiServiceControls = document.getElementById('multiServiceControls');
+    const selectionGuideText = document.getElementById('selectionGuideText');
+    
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const newMode = this.value;
+            
+            // Clear existing selections when switching modes
+            if (newMode !== selectionMode) {
+                selectedService = null;
+                multiSelectedServices.clear();
+                clearServiceCrossAnalysisResults();
+            }
+            
+            selectionMode = newMode;
+            
+            // Show/hide multi-service controls
+            if (multiServiceControls) {
+                multiServiceControls.style.display = (newMode === 'multiple') ? 'flex' : 'none';
+            }
+            
+            // Update guide text
+            if (selectionGuideText) {
+                if (newMode === 'multiple') {
+                    selectionGuideText.textContent = '💡 クリックで複数選択・解除';
+                } else {
+                    selectionGuideText.textContent = '💡 クリックで選択切り替え';
+                }
+            }
+            
+            // Update UI state
+            updateServiceRowSelection();
+            updateSelectionStatus();
+        });
+    });
+}
+
+/**
+ * Setup multi-service control buttons
+ */
+function setupMultiServiceControls() {
+    const selectAllBtn = document.getElementById('selectAllServices');
+    const clearAllBtn = document.getElementById('clearAllServices');
+    
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            if (selectionMode !== 'multiple') return;
+            
+            // Select all available services
+            const serviceRows = document.querySelectorAll('.service-row');
+            serviceRows.forEach(row => {
+                const serviceName = row.dataset.service;
+                if (serviceName) {
+                    multiSelectedServices.add(serviceName);
+                }
+            });
+            
+            // Update analysis and UI
+            if (multiSelectedServices.size > 0) {
+                handleMultiServiceAnalysis();
+            }
+            updateServiceRowSelection();
+            updateSelectionStatus();
+        });
+    }
+    
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', function() {
+            if (selectionMode !== 'multiple') return;
+            
+            // Clear all selections
+            multiSelectedServices.clear();
+            clearServiceCrossAnalysisResults();
+            
+            // Update UI
+            updateServiceRowSelection();
+            updateSelectionStatus();
+        });
+    }
+}
+
+/**
+ * Handle multi-service analysis (placeholder)
+ */
+function handleMultiServiceAnalysis() {
+    if (multiSelectedServices.size === 0) {
+        clearServiceCrossAnalysisResults();
+        return;
+    }
+    
+    try {
+        console.log('Analyzing multiple services:', Array.from(multiSelectedServices));
+        
+        // Calculate multi-service analysis data
+        const analysisData = calculateMultiServiceAnalysis(Array.from(multiSelectedServices));
+        
+        // Display results
+        displayMultiServiceAnalysisResults(analysisData, Array.from(multiSelectedServices));
+        updateMultiServiceAnalysisChart(analysisData, Array.from(multiSelectedServices));
+        
+        showMessage(`${multiSelectedServices.size}個のサービス分析が完了しました`, 'success');
+    } catch (error) {
+        console.error('Error in multi-service analysis:', error);
+        showMessage(`複数サービス分析エラー: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Calculate multi-service analysis data (全アカウント合計)
+ * @param {Array} selectedServices - Array of selected service names
+ * @returns {Object} Analysis data with multi-service breakdown
+ */
+function calculateMultiServiceAnalysis(selectedServices) {
+    if (!selectedServices || selectedServices.length === 0) {
+        return null;
+    }
+
+    // Get unique months from all accounts
+    const allMonths = new Set();
+    registeredAccounts.forEach(account => {
+        if (account.data && account.data.monthlyData) {
+            account.data.monthlyData.forEach(monthData => {
+                if (monthData.date) {
+                    allMonths.add(monthData.date);
+                }
+            });
+        }
+    });
+
+    // Sort months chronologically
+    const sortedMonths = Array.from(allMonths).sort();
+    
+    // Create chart data structure
+    const chartData = {
+        labels: sortedMonths.map(date => {
+            const monthMatch = date.match(/(\d{4})-(\d{2})/);
+            if (monthMatch) {
+                return `${monthMatch[1]}/${monthMatch[2]}`;
+            }
+            return date;
+        }),
+        datasets: []
+    };
+
+    // Create monthly breakdown data for table
+    const monthlyBreakdown = [];
+    
+    // Process each month
+    sortedMonths.forEach(month => {
+        const monthData = { date: month };
+        let monthTotal = 0;
+        
+        // Calculate total cost for each selected service across all accounts for this month
+        selectedServices.forEach(serviceName => {
+            let serviceMonthTotal = 0;
+            
+            registeredAccounts.forEach(account => {
+                if (account.data && account.data.monthlyData) {
+                    const accountMonthData = account.data.monthlyData.find(data => data.date === month);
+                    if (accountMonthData && accountMonthData[serviceName]) {
+                        serviceMonthTotal += accountMonthData[serviceName];
+                    }
+                }
+            });
+            
+            monthData[serviceName] = serviceMonthTotal;
+            monthTotal += serviceMonthTotal;
+        });
+        
+        monthData.total = monthTotal;
+        monthlyBreakdown.push(monthData);
+    });
+
+    // Create chart datasets for each selected service
+    const colors = generateColors(selectedServices.length + 1, 'services'); // +1 for total line
+    
+    selectedServices.forEach((serviceName, index) => {
+        const serviceData = monthlyBreakdown.map(month => month[serviceName] || 0);
+        
+        chartData.datasets.push({
+            label: serviceName,
+            data: serviceData,
+            borderColor: colors[index],
+            backgroundColor: colors[index] + '20',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.3,
+            fill: false
+        });
+    });
+
+    // Add total line (distinctive styling)
+    const totalData = monthlyBreakdown.map(month => month.total || 0);
+    chartData.datasets.push({
+        label: '合計',
+        data: totalData,
+        borderColor: '#1e40af',
+        backgroundColor: '#1e40af20',
+        borderWidth: 3,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.3,
+        fill: false,
+        borderDash: [5, 5] // Dashed line for total
+    });
+
+    // Calculate service totals and summary statistics
+    const serviceTotals = {};
+    selectedServices.forEach(serviceName => {
+        serviceTotals[serviceName] = monthlyBreakdown.reduce((sum, month) => {
+            return sum + (month[serviceName] || 0);
+        }, 0);
+    });
+
+    const grandTotal = Object.values(serviceTotals).reduce((sum, total) => sum + total, 0);
+
+    return {
+        services: selectedServices,
+        chartData: chartData,
+        monthlyBreakdown: monthlyBreakdown,
+        serviceTotals: serviceTotals,
+        grandTotal: grandTotal,
+        months: sortedMonths
+    };
+}
+
+/**
+ * Display multi-service analysis results (table)
+ * @param {Object} analysisData - Analysis data with multi-service breakdown
+ * @param {Array} selectedServices - Array of selected service names
+ */
+function displayMultiServiceAnalysisResults(analysisData, selectedServices) {
+    const resultsContainer = document.getElementById('serviceCrossAnalysisResults');
+    if (!resultsContainer || !analysisData) return;
+
+    const { monthlyBreakdown, serviceTotals, grandTotal } = analysisData;
+
+    // Create table headers
+    let tableHeaders = '<tr><th>月</th>';
+    selectedServices.forEach(service => {
+        tableHeaders += `<th>${escapeHtml(service)}</th>`;
+    });
+    tableHeaders += '<th>合計</th></tr>';
+
+    // Create table rows
+    const tableRows = monthlyBreakdown.map(monthData => {
+        const monthLabel = new Date(monthData.date).toLocaleDateString('ja-JP', { 
+            year: 'numeric', 
+            month: '2-digit' 
+        });
+        
+        let row = `<tr><td>${monthLabel}</td>`;
+        
+        selectedServices.forEach(service => {
+            const cost = monthData[service] || 0;
+            row += `<td>${formatCurrency(cost)}</td>`;
+        });
+        
+        row += `<td><strong>${formatCurrency(monthData.total)}</strong></td></tr>`;
+        return row;
+    }).join('');
+
+    // Create summary row
+    let summaryRow = '<tr class="total-row"><td><strong>合計</strong></td>';
+    selectedServices.forEach(service => {
+        summaryRow += `<td><strong>${formatCurrency(serviceTotals[service])}</strong></td>`;
+    });
+    summaryRow += `<td><strong>${formatCurrency(grandTotal)}</strong></td></tr>`;
+
+    const tableHTML = `
+        <h4>複数サービス比較分析 - 全アカウント合計</h4>
+        <p class="analysis-summary">選択サービス: ${selectedServices.join(', ')} (${selectedServices.length}個)</p>
+        <table class="multi-service-table">
+            <thead>${tableHeaders}</thead>
+            <tbody>
+                ${tableRows}
+                ${summaryRow}
+            </tbody>
+        </table>
+    `;
+
+    resultsContainer.innerHTML = tableHTML;
+}
+
+/**
+ * Update multi-service analysis chart
+ * @param {Object} analysisData - Analysis data with chart configuration
+ * @param {Array} selectedServices - Array of selected service names
+ */
+function updateMultiServiceAnalysisChart(analysisData, selectedServices) {
+    if (!analysisData || !analysisData.chartData) return;
+
+    const chartContainer = document.getElementById('serviceCrossAnalysisChart');
+    if (!chartContainer) return;
+
+    // Destroy existing chart
+    if (chartInstances.serviceCrossAnalysis) {
+        chartInstances.serviceCrossAnalysis.destroy();
+        chartInstances.serviceCrossAnalysis = null;
+    }
+
+    // Create chart configuration
+    const config = createMultiServiceChartConfig(analysisData, selectedServices);
+
+    // Create new chart
+    const canvas = chartContainer.querySelector('canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        chartInstances.serviceCrossAnalysis = new Chart(ctx, config);
     }
 }
 

@@ -307,15 +307,27 @@
                             <div class="service-selection-pane">
                                 <div class="service-list-header">
                                     <h4>サービス一覧</h4>
+                                    <div class="selection-mode-toggle">
+                                        <label class="mode-option">
+                                            <input type="radio" name="selectionMode" value="single" checked> 単一選択
+                                        </label>
+                                        <label class="mode-option">
+                                            <input type="radio" name="selectionMode" value="multiple"> 複数選択
+                                        </label>
+                                    </div>
                                     <div class="selection-status">
                                         <span id="selectionStatus">サービスを選択してください</span>
+                                    </div>
+                                    <div id="multiServiceControls" class="multi-service-controls" style="display: none;">
+                                        <button id="selectAllServices" class="control-button">全選択</button>
+                                        <button id="clearAllServices" class="control-button">全解除</button>
                                     </div>
                                 </div>
                                 <div id="serviceSelectionList" class="service-selection-list">
                                     <!-- 動的に生成されるサービス行 -->
                                 </div>
                                 <div class="selection-guide">
-                                    <span class="guide-text">💡 クリックで選択切り替え</span>
+                                    <span id="selectionGuideText" class="guide-text">💡 クリックで選択切り替え</span>
                                 </div>
                             </div>
                             

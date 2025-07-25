@@ -1485,7 +1485,8 @@ if (typeof module !== 'undefined' && module.exports) {
         getAccountServiceData,
         createStatisticalAnalysisChartConfig,
         createServiceCrossAnalysisChartConfig,
-        createServiceAccountChartConfig
+        createServiceAccountChartConfig,
+        createMultiServiceChartConfig
     };
 }
 
@@ -1706,80 +1707,12 @@ function createStatisticalAnalysisChartConfig(analysisData, basePeriod, compareP
  * @returns {Object} Chart.js configuration object
  */
 function createServiceAccountChartConfig(analysisData, selectedService) {
-    const accounts = Object.keys(analysisData.accounts);
-    const months = analysisData.months;
+    // Use the chartData prepared in calculateServiceAccountAnalysis
+    const chartData = analysisData.chartData;
     
-    // Generate month labels (short format)
-    const monthLabels = months.map(month => {
-        const [year, monthNum] = month.split('-');
-        return `${monthNum}月`;
-    });
-    
-    // Define colors for accounts + total
-    const colors = [
-        '#3b82f6', // blue
-        '#ef4444', // red  
-        '#10b981', // green
-        '#f59e0b', // amber
-        '#8b5cf6', // purple
-        '#06b6d4', // cyan
-        '#f97316'  // orange
-    ];
-    
-    const datasets = [];
-    
-    // Create dataset for each account
-    accounts.forEach((accountName, index) => {
-        const accountData = analysisData.accounts[accountName];
-        const monthlyData = months.map(month => {
-            const monthRecord = accountData.monthlyData.find(m => m.month === month);
-            return monthRecord ? monthRecord.cost : 0;
-        });
-        
-        datasets.push({
-            label: accountName,
-            data: monthlyData,
-            borderColor: colors[index % colors.length],
-            backgroundColor: colors[index % colors.length],
-            borderWidth: 2,
-            fill: false,
-            tension: 0.1,
-            pointBackgroundColor: colors[index % colors.length],
-            pointBorderColor: 'white',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6
-        });
-    });
-    
-    // Add total line (thicker, different style)
-    const totalData = months.map(month => {
-        const totalRecord = analysisData.totalData.find(t => t.month === month);
-        return totalRecord ? totalRecord.cost : 0;
-    });
-    
-    datasets.push({
-        label: '合計',
-        data: totalData,
-        borderColor: '#059669',
-        backgroundColor: '#059669',
-        borderWidth: 3,
-        fill: false,
-        tension: 0.1,
-        pointBackgroundColor: '#059669',
-        pointBorderColor: 'white',
-        pointBorderWidth: 3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderDash: [0] // solid line for total
-    });
-    
-    return {
+    const config = {
         type: 'line',
-        data: {
-            labels: monthLabels,
-            datasets: datasets
-        },
+        data: chartData,
         options: {
             ...CHART_DEFAULTS,
             interaction: {
@@ -1790,7 +1723,7 @@ function createServiceAccountChartConfig(analysisData, selectedService) {
                 ...CHART_DEFAULTS.plugins,
                 title: {
                     display: true,
-                    text: `${selectedService} サービス - アカウント別推移`,
+                    text: `${selectedService} - アカウント別推移`,
                     font: {
                         size: 16,
                         weight: 'bold'
@@ -1809,10 +1742,12 @@ function createServiceAccountChartConfig(analysisData, selectedService) {
                 tooltip: {
                     ...CHART_DEFAULTS.plugins.tooltip,
                     callbacks: {
+                        title: function(context) {
+                            return context[0].label;
+                        },
                         label: function(context) {
                             const label = context.dataset.label || '';
-                            const value = formatCurrency(context.parsed.y);
-                            return `${label}: $${value}`;
+                            return `${label}: ${formatCurrency(context.parsed.y)}`;
                         }
                     }
                 }
@@ -1850,6 +1785,145 @@ function createServiceAccountChartConfig(analysisData, selectedService) {
                             return formatCurrency(value);
                         }
                     }
+                }
+            }
+        }
+    };
+    
+    return config;
+}
+
+/**
+ * Create multi-service chart configuration
+ * @param {Object} analysisData - Analysis data with chart configuration
+ * @param {Array} selectedServices - Array of selected service names
+ * @returns {Object} Chart.js configuration
+ */
+function createMultiServiceChartConfig(analysisData, selectedServices) {
+    if (!analysisData || !analysisData.chartData) {
+        return createEmptyChartConfig('複数サービス分析データがありません');
+    }
+
+    const { chartData } = analysisData;
+
+    return {
+        type: 'line',
+        data: chartData,
+        options: {
+            ...CHART_DEFAULTS,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                ...CHART_DEFAULTS.plugins,
+                title: {
+                    display: true,
+                    text: `複数サービス比較分析 (${selectedServices.length}個選択)`,
+                    font: { size: 16, weight: 'bold' }
+                },
+                legend: {
+                    ...CHART_DEFAULTS.plugins.legend,
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        ...CHART_DEFAULTS.plugins.legend.labels,
+                        usePointStyle: true,
+                        padding: 20,
+                        generateLabels: function(chart) {
+                            const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                            const labels = original.call(this, chart);
+                            
+                            // Sort labels: services first, then total
+                            labels.sort((a, b) => {
+                                if (a.text === '合計') return 1;
+                                if (b.text === '合計') return -1;
+                                return a.text.localeCompare(b.text);
+                            });
+                            
+                            return labels;
+                        }
+                    }
+                },
+                tooltip: {
+                    ...CHART_DEFAULTS.plugins.tooltip,
+                    callbacks: {
+                        title: function(context) {
+                            return context[0].label;
+                        },
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            return `${label}: ${formatCurrency(context.parsed.y)}`;
+                        },
+                        afterBody: function(context) {
+                            // Calculate and show percentage breakdown for non-total lines
+                            const dataIndex = context[0].dataIndex;
+                            const totalDataset = context[0].chart.data.datasets.find(ds => ds.label === '合計');
+                            
+                            if (totalDataset && context.length > 1) {
+                                const totalValue = totalDataset.data[dataIndex];
+                                
+                                if (totalValue > 0) {
+                                    const breakdown = context
+                                        .filter(item => item.dataset.label !== '合計')
+                                        .map(item => {
+                                            const percentage = ((item.parsed.y / totalValue) * 100).toFixed(1);
+                                            return `  ${item.dataset.label}: ${percentage}%`;
+                                        });
+                                    
+                                    return ['', '構成比:', ...breakdown];
+                                }
+                            }
+                            return [];
+                        }
+                    }
+                }
+            },
+            scales: {
+                ...CHART_DEFAULTS.scales,
+                x: {
+                    ...CHART_DEFAULTS.scales.x,
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '月',
+                        font: { size: 12, weight: 'bold' }
+                    },
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        ...CHART_DEFAULTS.scales.x.ticks,
+                        font: { size: 11 }
+                    }
+                },
+                y: {
+                    ...CHART_DEFAULTS.scales.y,
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'コスト ($)',
+                        font: { size: 12, weight: 'bold' }
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        ...CHART_DEFAULTS.scales.y.ticks,
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    hoverBackgroundColor: function(context) {
+                        return context.dataset.borderColor;
+                    },
+                    hoverBorderColor: 'white',
+                    hoverBorderWidth: 2
+                },
+                line: {
+                    tension: 0.3
                 }
             }
         }

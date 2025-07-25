@@ -1713,3 +1713,196 @@ canvas {
         padding: 1rem;
     }
 }
+
+/* サービス選択モード切り替え機能 */
+.selection-mode-toggle {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.mode-option {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #475569;
+    transition: color 0.2s ease;
+}
+
+.mode-option:hover {
+    color: #1e40af;
+}
+
+.mode-option input[type="radio"] {
+    margin-right: 0.5rem;
+    accent-color: #3b82f6;
+}
+
+.mode-option input[type="radio"]:checked + span {
+    color: #1e40af;
+    font-weight: 600;
+}
+
+/* 複数選択コントロールボタン */
+.multi-service-controls {
+    margin: 0.5rem 0;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.control-button {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.control-button:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.control-button:active {
+    background: #e5e7eb;
+}
+
+/* サービス行の複数選択スタイル */
+.service-row.multi-select {
+    cursor: pointer;
+    position: relative;
+    padding-left: 2.5rem;
+}
+
+.service-row.multi-select::before {
+    content: '';
+    position: absolute;
+    left: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 3px;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.service-row.multi-select.selected::before {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.service-row.multi-select.selected::after {
+    content: '✓';
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* 複数選択時のステータス表示 */
+.selection-status.multi-mode {
+    font-size: 0.9rem;
+    color: #1e40af;
+}
+
+.selection-status.multi-mode .selection-count {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+/* 複数サービス分析結果スタイル */
+.multi-service-analysis-results {
+    margin-top: 1rem;
+}
+
+.multi-service-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.multi-service-table th,
+.multi-service-table td {
+    padding: 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.multi-service-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    text-align: center;
+}
+
+.multi-service-table th:first-child,
+.multi-service-table td:first-child {
+    text-align: left;
+}
+
+.multi-service-table tr:hover {
+    background: #f9fafb;
+}
+
+.multi-service-table .total-row {
+    background: #f3f4f6;
+    font-weight: 600;
+}
+
+.multi-service-table .total-row td {
+    border-bottom: none;
+    border-top: 2px solid #d1d5db;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .selection-mode-toggle {
+        padding: 0.3rem;
+    }
+    
+    .mode-option {
+        font-size: 0.8rem;
+        margin-right: 0.8rem;
+    }
+    
+    .multi-service-controls {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    
+    .control-button {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+    }
+    
+    .service-row.multi-select {
+        padding-left: 2rem;
+    }
+    
+    .multi-service-table th,
+    .multi-service-table td {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+}

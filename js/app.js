@@ -82,6 +82,12 @@ function cacheElements() {
         targetMonth: document.getElementById('targetMonth'),
         executeComparison: document.getElementById('executeComparison'),
         
+        // Service cross-analysis
+        serviceSelect: document.getElementById('serviceSelect'),
+        executeServiceAnalysis: document.getElementById('executeServiceAnalysis'),
+        serviceCrossAnalysisChart: document.getElementById('serviceCrossAnalysisChart'),
+        serviceCrossAnalysisResults: document.getElementById('serviceCrossAnalysisResults'),
+        
         // Chart controls
         serviceComparisonPeriod: document.getElementById('serviceComparisonPeriod'),
         stackedAccount: document.getElementById('stackedAccount'),
@@ -159,6 +165,14 @@ function setupEventListeners() {
     // Reduction effect comparison - simplified month selection
     if (elements.executeComparison) {
         elements.executeComparison.addEventListener('click', handleMonthComparison);
+    }
+    
+    // Service cross-analysis
+    if (elements.serviceSelect) {
+        elements.serviceSelect.addEventListener('change', validateServiceSelection);
+    }
+    if (elements.executeServiceAnalysis) {
+        elements.executeServiceAnalysis.addEventListener('click', handleServiceCrossAnalysis);
     }
     
     // Statistical analysis
@@ -504,6 +518,9 @@ function displayAnalysisResults() {
     
     // Reduction effect comparison
     displayReductionEffectComparison();
+    
+    // Initialize service cross-analysis
+    initializeServiceCrossAnalysis();
     
     // Initialize statistical analysis controls
     initializeStatisticalAnalysis();
@@ -1599,6 +1616,201 @@ function initializeStatisticalAnalysis() {
         }
         
         validateStatisticalPeriods();
+    }
+}
+
+/**
+ * Initialize service cross-analysis controls
+ */
+function initializeServiceCrossAnalysis() {
+    if (!elements.serviceSelect || !aggregatedData) return;
+    
+    // Get all unique services from all accounts
+    const allServices = new Set();
+    registeredAccounts.forEach(account => {
+        if (account.data && account.data.monthlyData) {
+            account.data.monthlyData.forEach(monthData => {
+                // Services are stored as direct properties of monthData
+                const nonServiceKeys = ['date', 'period', 'totalCost', 'summary', 'month', 'year'];
+                Object.keys(monthData).forEach(key => {
+                    if (!nonServiceKeys.includes(key) && typeof monthData[key] === 'number') {
+                        allServices.add(key);
+                    }
+                });
+            });
+        }
+    });
+    
+    // Sort services alphabetically
+    const sortedServices = Array.from(allServices).sort();
+    
+    // Generate service options
+    const options = ['<option value="">サービスを選択してください</option>'];
+    sortedServices.forEach(service => {
+        options.push(`<option value="${escapeHtml(service)}">${escapeHtml(service)}</option>`);
+    });
+    
+    elements.serviceSelect.innerHTML = options.join('');
+    validateServiceSelection();
+}
+
+/**
+ * Validate service selection
+ */
+function validateServiceSelection() {
+    if (!elements.serviceSelect || !elements.executeServiceAnalysis) return;
+    
+    const selectedService = elements.serviceSelect.value;
+    const hasData = registeredAccounts.length > 0;
+    
+    elements.executeServiceAnalysis.disabled = !selectedService || !hasData;
+}
+
+/**
+ * Handle service cross-analysis execution
+ */
+function handleServiceCrossAnalysis() {
+    const selectedService = elements.serviceSelect.value;
+    if (!selectedService || !registeredAccounts.length) {
+        showMessage('サービスを選択してください', 'error');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        elements.executeServiceAnalysis.disabled = true;
+        elements.executeServiceAnalysis.textContent = '分析中...';
+        
+        console.log('Analyzing service:', selectedService);
+        
+        // Calculate service cross-analysis data
+        const analysisData = calculateServiceCrossAnalysis(selectedService);
+        
+        // Display results
+        displayServiceCrossAnalysisResults(analysisData, selectedService);
+        updateServiceCrossAnalysisChart(analysisData, selectedService);
+        
+        showMessage(`${selectedService}の横断分析が完了しました`, 'success');
+        
+    } catch (error) {
+        console.error('Error in service cross-analysis:', error);
+        showMessage(`サービス分析エラー: ${error.message}`, 'error');
+    } finally {
+        // Reset button state
+        elements.executeServiceAnalysis.disabled = false;
+        elements.executeServiceAnalysis.textContent = '分析実行';
+        validateServiceSelection();
+    }
+}
+
+/**
+ * Calculate service cross-analysis data
+ * @param {string} selectedService - The selected service to analyze
+ * @returns {Array} Analysis data for each account
+ */
+function calculateServiceCrossAnalysis(selectedService) {
+    const analysisData = [];
+    
+    registeredAccounts.forEach(account => {
+        if (!account.data || !account.data.monthlyData) return;
+        
+        const accountData = {
+            accountName: account.name,
+            monthlyData: [],
+            totalCost: 0,
+            averageCost: 0,
+            trend: 'stable'
+        };
+        
+        // Extract monthly data for the selected service
+        account.data.monthlyData.forEach(monthData => {
+            const serviceCost = monthData[selectedService] || 0;
+            accountData.monthlyData.push({
+                date: monthData.date,
+                cost: serviceCost
+            });
+            accountData.totalCost += serviceCost;
+        });
+        
+        // Calculate average cost
+        if (accountData.monthlyData.length > 0) {
+            accountData.averageCost = accountData.totalCost / accountData.monthlyData.length;
+        }
+        
+        // Calculate trend
+        if (accountData.monthlyData.length >= 2) {
+            const firstMonth = accountData.monthlyData[0].cost;
+            const lastMonth = accountData.monthlyData[accountData.monthlyData.length - 1].cost;
+            
+            if (firstMonth > 0) {
+                const change = ((lastMonth - firstMonth) / firstMonth) * 100;
+                if (change > 5) accountData.trend = 'increasing';
+                else if (change < -5) accountData.trend = 'decreasing';
+            }
+        }
+        
+        analysisData.push(accountData);
+    });
+    
+    return analysisData;
+}
+
+/**
+ * Display service cross-analysis results
+ * @param {Array} analysisData - Analysis data for each account
+ * @param {string} selectedService - The selected service name
+ */
+function displayServiceCrossAnalysisResults(analysisData, selectedService) {
+    if (!elements.serviceCrossAnalysisResults || !analysisData.length) return;
+    
+    // Create summary table
+    const tableHTML = `
+        <h4>${escapeHtml(selectedService)} サービス利用状況</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>アカウント</th>
+                    <th>総コスト</th>
+                    <th>月平均コスト</th>
+                    <th>トレンド</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${analysisData.map(data => `
+                    <tr>
+                        <td>${escapeHtml(data.accountName)}</td>
+                        <td>${formatCurrency(data.totalCost)}</td>
+                        <td>${formatCurrency(data.averageCost)}</td>
+                        <td class="growth-${data.trend}">${getTrendIcon(data.trend)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    elements.serviceCrossAnalysisResults.innerHTML = tableHTML;
+}
+
+/**
+ * Update service cross-analysis chart
+ * @param {Array} analysisData - Analysis data for each account
+ * @param {string} selectedService - The selected service name
+ */
+function updateServiceCrossAnalysisChart(analysisData, selectedService) {
+    if (!elements.serviceCrossAnalysisChart || !analysisData.length) return;
+    
+    // Create or update chart
+    const canvas = elements.serviceCrossAnalysisChart.querySelector('canvas');
+    if (canvas && typeof Chart !== 'undefined') {
+        const ctx = canvas.getContext('2d');
+        
+        // Destroy existing chart
+        if (chartInstances.serviceCrossAnalysis) {
+            chartInstances.serviceCrossAnalysis.destroy();
+        }
+        
+        const config = createServiceCrossAnalysisChartConfig(analysisData, selectedService);
+        chartInstances.serviceCrossAnalysis = new Chart(ctx, config);
     }
 }
 

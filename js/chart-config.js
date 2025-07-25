@@ -1337,6 +1337,133 @@ function getAccountServiceData(accountName, data) {
     return serviceData;
 }
 
+/**
+ * Create service cross-analysis chart configuration
+ * @param {Array} analysisData - Analysis data for each account
+ * @param {string} selectedService - The selected service name
+ * @returns {Object} Chart.js configuration
+ */
+function createServiceCrossAnalysisChartConfig(analysisData, selectedService) {
+    if (!analysisData || analysisData.length === 0) {
+        return createEmptyChartConfig('サービス分析データがありません');
+    }
+
+    // Get all unique dates across all accounts
+    const allDates = new Set();
+    analysisData.forEach(accountData => {
+        accountData.monthlyData.forEach(monthData => {
+            allDates.add(monthData.date);
+        });
+    });
+    
+    const sortedDates = Array.from(allDates).sort();
+    const labels = sortedDates.map(date => {
+        const d = new Date(date);
+        return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月`;
+    });
+
+    // Create datasets for each account
+    const datasets = analysisData.map((accountData, index) => {
+        const data = sortedDates.map(date => {
+            const monthData = accountData.monthlyData.find(m => m.date === date);
+            return monthData ? monthData.cost : 0;
+        });
+
+        const color = CHART_COLORS[Object.keys(CHART_COLORS)[index % Object.keys(CHART_COLORS).length]];
+        
+        return {
+            label: accountData.accountName,
+            data: data,
+            borderColor: color,
+            backgroundColor: color + '20',
+            borderWidth: 3,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            tension: 0.3,
+            fill: false
+        };
+    });
+
+    return {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                ...CHART_DEFAULTS.plugins,
+                title: {
+                    display: true,
+                    text: `${selectedService} サービス横断推移分析`,
+                    font: { size: 16, weight: 'bold' }
+                },
+                legend: {
+                    ...CHART_DEFAULTS.plugins.legend,
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        ...CHART_DEFAULTS.plugins.legend.labels,
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    ...CHART_DEFAULTS.plugins.tooltip,
+                    callbacks: {
+                        title: function(tooltips) {
+                            return tooltips[0].label;
+                        },
+                        label: function(context) {
+                            const accountName = context.dataset.label;
+                            const cost = formatCurrency(context.parsed.y);
+                            return `${accountName}: ${cost}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                ...CHART_DEFAULTS.scales,
+                x: {
+                    ...CHART_DEFAULTS.scales.x,
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '月'
+                    },
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        ...CHART_DEFAULTS.scales.x.ticks,
+                        font: { size: 11 }
+                    }
+                },
+                y: {
+                    ...CHART_DEFAULTS.scales.y,
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'コスト ($)'
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        ...CHART_DEFAULTS.scales.y.ticks,
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
+
 // Export functions for module use and testing
 if (typeof module !== 'undefined' && module.exports) {
     // Node.js environment (for testing)
@@ -1356,7 +1483,8 @@ if (typeof module !== 'undefined' && module.exports) {
         createAccountComparisonChartConfig,
         createAccountServiceTrendConfig,
         getAccountServiceData,
-        createStatisticalAnalysisChartConfig
+        createStatisticalAnalysisChartConfig,
+        createServiceCrossAnalysisChartConfig
     };
 }
 

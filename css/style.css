@@ -809,6 +809,33 @@ canvas {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
+/* Service cross-analysis controls */
+.service-selection-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.service-select {
+    min-width: 200px;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.auto-analysis-note {
+    font-size: 0.85rem;
+    color: #059669;
+    background: #ecfdf5;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    border: 1px solid #d1fae5;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
 .analysis-card h3 {
     font-size: 1.1rem;
     color: #2d3748;

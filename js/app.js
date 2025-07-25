@@ -1655,7 +1655,7 @@ function initializeServiceCrossAnalysis() {
 }
 
 /**
- * Validate service selection
+ * Validate service selection and auto-execute analysis
  */
 function validateServiceSelection() {
     if (!elements.serviceSelect || !elements.executeServiceAnalysis) return;
@@ -1664,6 +1664,14 @@ function validateServiceSelection() {
     const hasData = registeredAccounts.length > 0;
     
     elements.executeServiceAnalysis.disabled = !selectedService || !hasData;
+    
+    // Auto-execute analysis when service is selected
+    if (selectedService && hasData) {
+        handleServiceCrossAnalysis();
+    } else {
+        // Clear results when no service is selected
+        clearServiceCrossAnalysisResults();
+    }
 }
 
 /**
@@ -1811,6 +1819,22 @@ function updateServiceCrossAnalysisChart(analysisData, selectedService) {
         
         const config = createServiceCrossAnalysisChartConfig(analysisData, selectedService);
         chartInstances.serviceCrossAnalysis = new Chart(ctx, config);
+    }
+}
+
+/**
+ * Clear service cross-analysis results
+ */
+function clearServiceCrossAnalysisResults() {
+    // Clear chart
+    if (chartInstances.serviceCrossAnalysis) {
+        chartInstances.serviceCrossAnalysis.destroy();
+        chartInstances.serviceCrossAnalysis = null;
+    }
+    
+    // Clear results table
+    if (elements.serviceCrossAnalysisResults) {
+        elements.serviceCrossAnalysisResults.innerHTML = '';
     }
 }
 

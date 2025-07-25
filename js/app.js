@@ -1707,7 +1707,6 @@ function handleServiceCrossAnalysis() {
         // Reset button state
         elements.executeServiceAnalysis.disabled = false;
         elements.executeServiceAnalysis.textContent = '分析実行';
-        validateServiceSelection();
     }
 }
 

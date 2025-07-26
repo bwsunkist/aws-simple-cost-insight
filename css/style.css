@@ -844,6 +844,20 @@ canvas {
     padding-bottom: 0.5rem;
 }
 
+.analysis-description {
+    margin-bottom: 1rem;
+}
+
+.description-text {
+    display: inline-block;
+    font-size: 0.85rem;
+    color: #718096;
+    background: #edf2f7;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
 .analysis-content {
     font-size: 0.9rem;
     line-height: 1.5;

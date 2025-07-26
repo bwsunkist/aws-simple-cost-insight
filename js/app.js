@@ -635,7 +635,7 @@ function handleThresholdChange(event) {
 function updateLowUsageServicesDisplay() {
     if (!aggregatedData || !aggregatedData.monthlyTrends || !elements.lowUsageServices) return;
     
-    const threshold = parseFloat(elements.lowUsageThreshold?.value || 0.01);
+    const threshold = parseFloat(elements.lowUsageThreshold?.value || 10);
     
     // Get latest month data for low usage analysis
     const sortedTrends = aggregatedData.monthlyTrends.sort((a, b) => new Date(a.date) - new Date(b.date));

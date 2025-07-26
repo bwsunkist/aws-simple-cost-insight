@@ -70,7 +70,6 @@ function cacheElements() {
         
         // Analysis section
         analysisSection: document.getElementById('analysisSection'),
-        unusedServices: document.getElementById('unusedServices'),
         lowUsageServices: document.getElementById('lowUsageServices'),
         lowUsageThreshold: document.getElementById('lowUsageThreshold'),
         highCostServices: document.getElementById('highCostServices'),
@@ -479,15 +478,6 @@ function displayCharts() {
  */
 function displayAnalysisResults() {
     if (!aggregatedData || !aggregatedData.serviceAggregation) return;
-    
-    // Unused services (zero cost)
-    const unusedServices = Object.entries(aggregatedData.serviceAggregation)
-        .filter(([service, cost]) => cost === 0)
-        .map(([service]) => service);
-    
-    elements.unusedServices.innerHTML = unusedServices.length > 0 
-        ? `<ul class="service-list">${unusedServices.map(service => `<li>${escapeHtml(service)}</li>`).join('')}</ul>`
-        : '<p>未使用サービスはありません</p>';
     
     // Low usage services (configurable threshold)
     updateLowUsageServicesDisplay();

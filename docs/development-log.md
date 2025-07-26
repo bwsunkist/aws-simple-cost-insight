@@ -1,5 +1,137 @@
 # 開発ログ
 
+## 2025-07-26 サービス横断推移分析合計表示オプション機能追加
+
+### 概要
+サービス横断推移分析機能にグラフ内の合計線表示をオン/オフできる制御機能を追加。単一選択・複数選択両モードで動作し、チェックボックス変更時に即座に反映される。
+
+### 実施内容
+
+#### 1. HTML構造拡張
+**修正ファイル**: `index.html`
+**追加内容**:
+- 「合計を表示」チェックボックス追加（デフォルト：オン）
+- カスタムチェックボックススタイル対応の HTML 構造
+
+#### 2. CSS スタイリング追加
+**修正ファイル**: `css/style.css`（53行追加）
+**追加内容**:
+```css
+.total-display-option {
+    margin: 0.75rem 0 0.5rem 0;
+    padding: 0.5rem 0;
+    border-top: 1px solid #e5e7eb;
+}
+
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #374151;
+    user-select: none;
+}
+
+.checkbox-option .checkmark {
+    position: relative;
+    margin-right: 0.5rem;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 3px;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.checkbox-option input[type="checkbox"]:checked + .checkmark {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.checkbox-option input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+```
+
+#### 3. JavaScript 制御ロジック実装
+**修正ファイル**: `js/app.js`
+**追加機能**:
+- `setupTotalDisplayOption()`: チェックボックス変更イベント監視
+- チェック状態変更時に現在の分析を即座に再実行
+- 単一選択・複数選択両モードに対応
+
+**主要実装**:
+```javascript
+function setupTotalDisplayOption() {
+    const showTotalCheckbox = document.getElementById('showTotalInGraph');
+    
+    if (showTotalCheckbox) {
+        showTotalCheckbox.addEventListener('change', function() {
+            // Re-render current analysis if any service is selected
+            if (selectionMode === 'single' && selectedService) {
+                handleServiceCrossAnalysis();
+            } else if (selectionMode === 'multiple' && multiSelectedServices.size > 0) {
+                handleMultiServiceAnalysis();
+            }
+        });
+    }
+}
+```
+
+#### 4. Chart.js設定の動的更新
+**修正ファイル**: `js/chart-config.js`
+**修正内容**:
+- `createServiceAccountChartConfig()`: showTotalパラメータ追加
+- `createMultiServiceChartConfig()`: showTotalパラメータ追加  
+- データセットフィルタリング機能追加
+- 凡例表示制御機能追加
+
+**フィルタリング実装**:
+```javascript
+// Filter datasets based on showTotal option
+const filteredData = {
+    ...chartData,
+    datasets: showTotal ? chartData.datasets : chartData.datasets.filter(dataset => dataset.label !== '合計')
+};
+```
+
+#### 5. 単一選択・複数選択モード対応
+**単一選択モード**: アカウント別推移から「合計」線を制御
+**複数選択モード**: サービス別比較から「合計」線を制御
+**共通機能**: 即座反映、凡例表示制御、Chart.js再描画
+
+#### 6. E2E検証実施
+**検証内容**:
+- 単一選択モードでのEC2サービス選択・合計表示オン/オフ切り替え
+- 複数選択モードでのEC2+S3選択・合計表示制御
+- チェック状態変更時の即座反映動作確認
+- UI要素の正常表示確認
+
+### 技術的決定事項
+- **デフォルト値**: チェックオン（従来通り合計線表示）で後方互換性確保
+- **イベント処理**: change イベントで即座反映、リアルタイム更新実現
+- **データ構造**: 既存チャートデータを非破壊的にフィルタリング
+- **UI統一性**: 既存チェックボックススタイルと統一したデザイン
+
+### 作成・更新ファイル
+- `index.html`: チェックボックスHTML構造追加
+- `css/style.css`: 合計表示オプション用CSS（53行追加）
+- `js/app.js`: イベント処理とロジック制御機能追加
+- `js/chart-config.js`: Chart.js設定の動的更新機能追加
+- `USER_MANUAL.md`: 合計表示制御機能の操作説明追加
+
+### Git操作履歴
+- **コミット**: 32a8ce6 - "Add total display toggle option for service cross-analysis feature"
+- **変更ファイル**: 5ファイル, +127行, -11行
+
+---
+
 ## 2025-07-24 Issue修正 + ドキュメント更新: サービス横断推移分析チャート高さ問題解決
 
 ### 概要

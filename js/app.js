@@ -633,10 +633,20 @@ function handleThresholdChange(event) {
  * Update low usage services display based on current threshold
  */
 function updateLowUsageServicesDisplay() {
-    if (!aggregatedData || !aggregatedData.serviceAggregation || !elements.lowUsageServices) return;
+    if (!aggregatedData || !aggregatedData.monthlyTrends || !elements.lowUsageServices) return;
     
     const threshold = parseFloat(elements.lowUsageThreshold?.value || 0.01);
-    const lowUsageServices = Object.entries(aggregatedData.serviceAggregation)
+    
+    // Get latest month data for low usage analysis
+    const sortedTrends = aggregatedData.monthlyTrends.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const latestMonth = sortedTrends[sortedTrends.length - 1];
+    
+    if (!latestMonth || !latestMonth.serviceBreakdown) {
+        elements.lowUsageServices.innerHTML = '<p>最新月のデータがありません</p>';
+        return;
+    }
+    
+    const lowUsageServices = Object.entries(latestMonth.serviceBreakdown)
         .filter(([service, cost]) => cost > 0 && cost < threshold)
         .sort(([,a], [,b]) => a - b);
     

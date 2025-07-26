@@ -869,6 +869,57 @@ canvas {
     color: #4a5568;
 }
 
+/* Cost variation services styles */
+.cost-variation-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.cost-variation-item:last-child {
+    border-bottom: none;
+}
+
+.service-name-cost {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.service-name {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.variation-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.variation-rate {
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.variation-rate.increase {
+    background-color: #fed7d7;
+    color: #c53030;
+}
+
+.variation-rate.decrease {
+    background-color: #c6f6d5;
+    color: #22543d;
+}
+
+.previous-cost {
+    color: #718096;
+    font-size: 0.8rem;
+}
+
 /* フッター */
 .footer {
     background: #2d3748;

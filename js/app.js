@@ -70,6 +70,8 @@ function cacheElements() {
         
         // Analysis section
         analysisSection: document.getElementById('analysisSection'),
+        costVariationServices: document.getElementById('costVariationServices'),
+        costVariationThreshold: document.getElementById('costVariationThreshold'),
         lowUsageServices: document.getElementById('lowUsageServices'),
         lowUsageThreshold: document.getElementById('lowUsageThreshold'),
         highCostServices: document.getElementById('highCostServices'),
@@ -150,6 +152,9 @@ function setupEventListeners() {
     }
     
     // Threshold setting
+    if (elements.costVariationThreshold) {
+        elements.costVariationThreshold.addEventListener('input', handleCostVariationThresholdChange);
+    }
     if (elements.lowUsageThreshold) {
         elements.lowUsageThreshold.addEventListener('input', handleThresholdChange);
     }
@@ -479,6 +484,9 @@ function displayCharts() {
 function displayAnalysisResults() {
     if (!aggregatedData || !aggregatedData.serviceAggregation) return;
     
+    // Cost variation services (configurable threshold)
+    updateCostVariationServicesDisplay();
+    
     // Low usage services (configurable threshold)
     updateLowUsageServicesDisplay();
     
@@ -639,14 +647,99 @@ function updateLowUsageServicesDisplay() {
         : `<p>閾値 $${threshold.toFixed(2)} 以下のサービスはありません</p>`;
 }
 
+/**
+ * Update cost variation services display based on threshold
+ */
+function updateCostVariationServicesDisplay() {
+    if (!aggregatedData || !aggregatedData.monthlyTrends) return;
+    
+    const threshold = parseFloat(elements.costVariationThreshold.value) || 5;
+    const costVariations = calculateCostVariations(threshold);
+    
+    elements.costVariationServices.innerHTML = costVariations.length > 0
+        ? `<ul class="service-list">${costVariations.map(variation => 
+            `<li class="cost-variation-item">
+                <div class="service-name-cost">
+                    <span class="service-name">${escapeHtml(variation.service)}</span>
+                    <span class="service-cost">${formatCurrency(variation.currentCost)} 
+                        ${variation.changeType === 'increase' ? '📈' : '📉'}
+                    </span>
+                </div>
+                <div class="variation-details">
+                    <span class="variation-rate ${variation.changeType}">${variation.changeRate >= 0 ? '+' : ''}${variation.changeRate.toFixed(1)}%</span>
+                    <span class="previous-cost">前月: ${formatCurrency(variation.previousCost)}</span>
+                </div>
+            </li>`
+          ).join('')}</ul>`
+        : `<p>変動率 ${threshold}% 以上のサービスはありません</p>`;
+}
 
+/**
+ * Calculate cost variations between previous and current month
+ */
+function calculateCostVariations(threshold) {
+    if (!aggregatedData.monthlyTrends || aggregatedData.monthlyTrends.length < 2) {
+        return [];
+    }
+    
+    // Get the last two months of data
+    const sortedTrends = aggregatedData.monthlyTrends.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const currentMonth = sortedTrends[sortedTrends.length - 1];
+    const previousMonth = sortedTrends[sortedTrends.length - 2];
+    
+    if (!currentMonth.serviceBreakdown || !previousMonth.serviceBreakdown) {
+        return [];
+    }
+    
+    const variations = [];
+    
+    // Get all services from both months
+    const allServices = new Set([
+        ...Object.keys(currentMonth.serviceBreakdown),
+        ...Object.keys(previousMonth.serviceBreakdown)
+    ]);
+    
+    allServices.forEach(service => {
+        const currentCost = currentMonth.serviceBreakdown[service] || 0;
+        const previousCost = previousMonth.serviceBreakdown[service] || 0;
+        
+        // Skip if both costs are zero
+        if (currentCost === 0 && previousCost === 0) return;
+        
+        let changeRate = 0;
+        if (previousCost === 0 && currentCost > 0) {
+            // New service appeared
+            changeRate = 100;
+        } else if (previousCost > 0 && currentCost === 0) {
+            // Service disappeared
+            changeRate = -100;
+        } else if (previousCost > 0) {
+            // Normal calculation
+            changeRate = ((currentCost - previousCost) / previousCost) * 100;
+        }
+        
+        // Check if variation meets threshold
+        if (Math.abs(changeRate) >= threshold) {
+            variations.push({
+                service,
+                currentCost,
+                previousCost,
+                changeRate,
+                changeType: changeRate >= 0 ? 'increase' : 'decrease'
+            });
+        }
+    });
+    
+    // Sort by absolute change rate (highest variation first)
+    return variations.sort((a, b) => Math.abs(b.changeRate) - Math.abs(a.changeRate));
+}
 
-
-
-
-
-
-
+/**
+ * Handle cost variation threshold change
+ */
+function handleCostVariationThresholdChange() {
+    updateCostVariationServicesDisplay();
+}
 
 
 

@@ -250,6 +250,17 @@
                 <h2>分析結果</h2>
                 <div class="analysis-grid">
                     <div class="analysis-card">
+                        <h3>コスト変動サービス</h3>
+                        <div class="threshold-setting">
+                            <label for="costVariationThreshold">変動率: </label>
+                            <input type="number" id="costVariationThreshold" min="0" max="100" step="0.1" value="5">
+                            <span class="threshold-label">% 以上</span>
+                        </div>
+                        <div id="costVariationServices" class="analysis-content">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                    <div class="analysis-card">
                         <h3>低使用サービス</h3>
                         <div class="threshold-setting">
                             <label for="lowUsageThreshold">閾値: $</label>

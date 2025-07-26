@@ -1840,7 +1840,6 @@ function handleServiceCrossAnalysis() {
         displayServiceAccountAnalysisResults(analysisData, selectedService);
         updateServiceAccountAnalysisChart(analysisData, selectedService);
         
-        showMessage(`${selectedService}の横断分析が完了しました`, 'success');
         
     } catch (error) {
         console.error('Error in service cross-analysis:', error);
@@ -2094,8 +2093,12 @@ function updateServiceAccountAnalysisChart(analysisData, selectedService) {
         chartInstances.serviceCrossAnalysis.destroy();
     }
     
+    // Get total display option
+    const showTotalCheckbox = document.getElementById('showTotalInGraph');
+    const showTotal = showTotalCheckbox ? showTotalCheckbox.checked : true;
+    
     // Create chart configuration for account breakdown
-    const config = createServiceAccountChartConfig(analysisData, selectedService);
+    const config = createServiceAccountChartConfig(analysisData, selectedService, showTotal);
     
     // Create new chart
     const canvas = chartContainer.querySelector('canvas');
@@ -2188,6 +2191,9 @@ function setupSelectionModeToggle() {
     const multiServiceControls = document.getElementById('multiServiceControls');
     const selectionGuideText = document.getElementById('selectionGuideText');
     
+    // Setup total display option
+    setupTotalDisplayOption();
+    
     modeRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             const newMode = this.value;
@@ -2220,6 +2226,24 @@ function setupSelectionModeToggle() {
             updateSelectionStatus();
         });
     });
+}
+
+/**
+ * Setup total display option event listener
+ */
+function setupTotalDisplayOption() {
+    const showTotalCheckbox = document.getElementById('showTotalInGraph');
+    
+    if (showTotalCheckbox) {
+        showTotalCheckbox.addEventListener('change', function() {
+            // Re-render current analysis if any service is selected
+            if (selectionMode === 'single' && selectedService) {
+                handleServiceCrossAnalysis();
+            } else if (selectionMode === 'multiple' && multiSelectedServices.size > 0) {
+                handleMultiServiceAnalysis();
+            }
+        });
+    }
 }
 
 /**
@@ -2285,7 +2309,6 @@ function handleMultiServiceAnalysis() {
         displayMultiServiceAnalysisResults(analysisData, Array.from(multiSelectedServices));
         updateMultiServiceAnalysisChart(analysisData, Array.from(multiSelectedServices));
         
-        showMessage(`${multiSelectedServices.size}個のサービス分析が完了しました`, 'success');
     } catch (error) {
         console.error('Error in multi-service analysis:', error);
         showMessage(`複数サービス分析エラー: ${error.message}`, 'error');
@@ -2487,8 +2510,12 @@ function updateMultiServiceAnalysisChart(analysisData, selectedServices) {
         chartInstances.serviceCrossAnalysis = null;
     }
 
+    // Get total display option
+    const showTotalCheckbox = document.getElementById('showTotalInGraph');
+    const showTotal = showTotalCheckbox ? showTotalCheckbox.checked : true;
+    
     // Create chart configuration
-    const config = createMultiServiceChartConfig(analysisData, selectedServices);
+    const config = createMultiServiceChartConfig(analysisData, selectedServices, showTotal);
 
     // Create new chart
     const canvas = chartContainer.querySelector('canvas');

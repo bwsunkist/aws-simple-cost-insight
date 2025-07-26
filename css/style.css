@@ -1774,6 +1774,61 @@ canvas {
     background: #e5e7eb;
 }
 
+/* 合計表示オプション */
+.total-display-option {
+    margin: 0.75rem 0 0.5rem 0;
+    padding: 0.5rem 0;
+    border-top: 1px solid #e5e7eb;
+}
+
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #374151;
+    user-select: none;
+}
+
+.checkbox-option input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-option .checkmark {
+    position: relative;
+    margin-right: 0.5rem;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 3px;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.checkbox-option input[type="checkbox"]:checked + .checkmark {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.checkbox-option input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.checkbox-option:hover .checkmark {
+    border-color: #9ca3af;
+}
+
+.checkbox-option input[type="checkbox"]:checked + .checkmark:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
 /* サービス行の複数選択スタイル */
 .service-row.multi-select {
     cursor: pointer;

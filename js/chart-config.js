@@ -1706,13 +1706,19 @@ function createStatisticalAnalysisChartConfig(analysisData, basePeriod, compareP
  * @param {string} selectedService - The selected service name
  * @returns {Object} Chart.js configuration object
  */
-function createServiceAccountChartConfig(analysisData, selectedService) {
+function createServiceAccountChartConfig(analysisData, selectedService, showTotal = true) {
     // Use the chartData prepared in calculateServiceAccountAnalysis
     const chartData = analysisData.chartData;
     
+    // Filter datasets based on showTotal option
+    const filteredData = {
+        ...chartData,
+        datasets: showTotal ? chartData.datasets : chartData.datasets.filter(dataset => !dataset.label.includes('合計'))
+    };
+    
     const config = {
         type: 'line',
-        data: chartData,
+        data: filteredData,
         options: {
             ...CHART_DEFAULTS,
             interaction: {
@@ -1799,16 +1805,22 @@ function createServiceAccountChartConfig(analysisData, selectedService) {
  * @param {Array} selectedServices - Array of selected service names
  * @returns {Object} Chart.js configuration
  */
-function createMultiServiceChartConfig(analysisData, selectedServices) {
+function createMultiServiceChartConfig(analysisData, selectedServices, showTotal = true) {
     if (!analysisData || !analysisData.chartData) {
         return createEmptyChartConfig('複数サービス分析データがありません');
     }
 
     const { chartData } = analysisData;
+    
+    // Filter datasets based on showTotal option
+    const filteredData = {
+        ...chartData,
+        datasets: showTotal ? chartData.datasets : chartData.datasets.filter(dataset => dataset.label !== '合計')
+    };
 
     return {
         type: 'line',
-        data: chartData,
+        data: filteredData,
         options: {
             ...CHART_DEFAULTS,
             interaction: {
@@ -1834,14 +1846,17 @@ function createMultiServiceChartConfig(analysisData, selectedServices) {
                             const original = Chart.defaults.plugins.legend.labels.generateLabels;
                             const labels = original.call(this, chart);
                             
+                            // Filter and sort labels based on showTotal option
+                            let filteredLabels = showTotal ? labels : labels.filter(label => label.text !== '合計');
+                            
                             // Sort labels: services first, then total
-                            labels.sort((a, b) => {
+                            filteredLabels.sort((a, b) => {
                                 if (a.text === '合計') return 1;
                                 if (b.text === '合計') return -1;
                                 return a.text.localeCompare(b.text);
                             });
                             
-                            return labels;
+                            return filteredLabels;
                         }
                     }
                 },

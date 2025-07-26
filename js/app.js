@@ -75,13 +75,6 @@ function cacheElements() {
         lowUsageThreshold: document.getElementById('lowUsageThreshold'),
         highCostServices: document.getElementById('highCostServices'),
         
-        // Reduction effect comparison - simplified month selection
-        reductionEffectChart: document.getElementById('reductionEffectChart'),
-        reductionEffectTable: document.getElementById('reductionEffectTable'),
-        baseMonth: document.getElementById('baseMonth'),
-        targetMonth: document.getElementById('targetMonth'),
-        executeComparison: document.getElementById('executeComparison'),
-        
         // Service cross-analysis
         serviceSelect: document.getElementById('serviceSelect'),
         executeServiceAnalysis: document.getElementById('executeServiceAnalysis'),
@@ -160,11 +153,6 @@ function setupEventListeners() {
     // Threshold setting
     if (elements.lowUsageThreshold) {
         elements.lowUsageThreshold.addEventListener('input', handleThresholdChange);
-    }
-    
-    // Reduction effect comparison - simplified month selection
-    if (elements.executeComparison) {
-        elements.executeComparison.addEventListener('click', handleMonthComparison);
     }
     
     // Service cross-analysis
@@ -492,9 +480,6 @@ function displayCharts() {
 function displayAnalysisResults() {
     if (!aggregatedData || !aggregatedData.serviceAggregation) return;
     
-    // Initialize period selectors for account reduction comparison
-    initializePeriodSelectors();
-    
     // Unused services (zero cost)
     const unusedServices = Object.entries(aggregatedData.serviceAggregation)
         .filter(([service, cost]) => cost === 0)
@@ -521,9 +506,6 @@ function displayAnalysisResults() {
     
     // Growth rate table
     displayGrowthRateTable();
-    
-    // Reduction effect comparison
-    displayReductionEffectComparison();
     
     // Initialize service cross-analysis
     initializeServiceCrossAnalysis();
@@ -667,332 +649,18 @@ function updateLowUsageServicesDisplay() {
         : `<p>閾値 $${threshold.toFixed(2)} 以下のサービスはありません</p>`;
 }
 
-/**
- * Display reduction effect comparison
- */
-function displayReductionEffectComparison() {
-    if (!registeredAccounts.length || !elements.reductionEffectTable) return;
-    
-    const baseline = elements.comparisonBaseline?.value || 'first-month';
-    const reductionData = calculateReductionEffects(baseline);
-    
-    // Update table
-    const tableHTML = `
-        <table>
-            <thead>
-                <tr>
-                    <th>アカウント</th>
-                    <th>基準コスト</th>
-                    <th>最新コスト</th>
-                    <th>削減額</th>
-                    <th>削減率</th>
-                    <th>効果</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${reductionData.map(data => `
-                    <tr>
-                        <td>${escapeHtml(data.accountName)}</td>
-                        <td>${formatCurrency(data.baselineCost)}</td>
-                        <td>${formatCurrency(data.latestCost)}</td>
-                        <td class="${data.reductionAmount >= 0 ? 'reduction-effect-positive' : 'reduction-effect-negative'}">
-                            ${data.reductionAmount >= 0 ? '+' : ''}${formatCurrency(Math.abs(data.reductionAmount))}
-                        </td>
-                        <td class="${data.reductionPercentage >= 0 ? 'reduction-effect-positive' : 'reduction-effect-negative'}">
-                            ${data.reductionPercentage >= 0 ? '+' : ''}${data.reductionPercentage.toFixed(1)}%
-                        </td>
-                        <td>${getReductionEffectIcon(data.reductionPercentage)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-    
-    elements.reductionEffectTable.innerHTML = tableHTML;
-    
-    // Update chart if needed
-    updateReductionEffectChart(reductionData);
-}
 
-/**
- * Calculate reduction effects for all accounts
- */
-function calculateReductionEffects(baseline) {
-    return registeredAccounts.map(account => {
-        const monthlyData = account.data.monthlyData;
-        if (!monthlyData || monthlyData.length < 2) {
-            return {
-                accountName: account.name,
-                baselineCost: 0,
-                latestCost: 0,
-                reductionAmount: 0,
-                reductionPercentage: 0
-            };
-        }
-        
-        const sortedData = monthlyData.sort((a, b) => new Date(a.date) - new Date(b.date));
-        const latestCost = sortedData[sortedData.length - 1].totalCost;
-        
-        let baselineCost;
-        switch (baseline) {
-            case 'first-month':
-                baselineCost = sortedData[0].totalCost;
-                break;
-            case 'peak-month':
-                baselineCost = Math.max(...sortedData.map(d => d.totalCost));
-                break;
-            case 'previous-month':
-                baselineCost = sortedData.length > 1 ? sortedData[sortedData.length - 2].totalCost : latestCost;
-                break;
-            default:
-                baselineCost = sortedData[0].totalCost;
-        }
-        
-        const reductionAmount = baselineCost - latestCost;
-        const reductionPercentage = baselineCost > 0 ? (reductionAmount / baselineCost) * 100 : 0;
-        
-        return {
-            accountName: account.name,
-            baselineCost,
-            latestCost,
-            reductionAmount,
-            reductionPercentage
-        };
-    });
-}
 
-/**
- * Get reduction effect icon
- */
-function getReductionEffectIcon(percentage) {
-    if (percentage > 10) return '🎯'; // Excellent reduction
-    if (percentage > 5) return '✅'; // Good reduction  
-    if (percentage > 0) return '📉'; // Some reduction
-    if (percentage === 0) return '➡️'; // No change
-    return '📈'; // Cost increase
-}
 
-/**
- * Handle comparison baseline change
- */
-function handleComparisonBaselineChange(event) {
-    const isCustomPeriod = event.target.value === 'custom-period';
-    
-    // Show/hide custom period controls
-    if (elements.customPeriodControls) {
-        elements.customPeriodControls.style.display = isCustomPeriod ? 'block' : 'none';
-    }
-    
-    if (isCustomPeriod) {
-        // Initialize period selectors with available dates
-        initializePeriodSelectors();
-    } else if (registeredAccounts.length > 0) {
-        displayReductionEffectComparison();
-    }
-}
 
-/**
- * Initialize month selectors with available dates
- */
-function initializePeriodSelectors() {
-    if (!aggregatedData || !aggregatedData.monthlyTrends) return;
-    
-    const availableDates = aggregatedData.monthlyTrends.map(trend => trend.date).sort();
-    
-    // Clear existing options and populate month selectors
-    const selectors = [elements.baseMonth, elements.targetMonth];
-    
-    selectors.forEach(selector => {
-        if (selector) {
-            selector.innerHTML = '<option value="">選択してください</option>';
-            availableDates.forEach(date => {
-                const option = document.createElement('option');
-                option.value = date;
-                option.textContent = formatDateForDisplay(date);
-                selector.appendChild(option);
-            });
-        }
-    });
-    
-    // Set default to previous month comparison (if we have at least 2 months)
-    if (availableDates.length >= 2) {
-        // Base month: second to last month (previous month)
-        if (elements.baseMonth) elements.baseMonth.value = availableDates[availableDates.length - 2];
-        
-        // Target month: last month (current month)
-        if (elements.targetMonth) elements.targetMonth.value = availableDates[availableDates.length - 1];
-        
-        // Execute default comparison automatically
-        handleMonthComparison();
-    }
-}
 
-/**
- * Handle month comparison execution
- */
-function handleMonthComparison() {
-    if (!validateMonthSelection()) return;
-    
-    const baseMonth = elements.baseMonth.value;
-    const targetMonth = elements.targetMonth.value;
-    
-    // Create period objects for single month comparison
-    const basePeriod = {
-        start: baseMonth,
-        end: baseMonth
-    };
-    const targetPeriod = {
-        start: targetMonth,
-        end: targetMonth
-    };
-    
-    const reductionData = calculateCustomPeriodReduction(basePeriod, targetPeriod);
-    displayCustomPeriodResults(reductionData, basePeriod, targetPeriod);
-}
 
-/**
- * Validate month selection
- */
-function validateMonthSelection() {
-    const requiredFields = [elements.baseMonth, elements.targetMonth];
-    
-    for (const field of requiredFields) {
-        if (!field || !field.value) {
-            alert('ベース月と対象月を選択してください。');
-            return false;
-        }
-    }
-    
-    // No additional validation needed for single month selection
-    return true;
-}
 
-/**
- * Calculate reduction effect for custom periods
- */
-function calculateCustomPeriodReduction(basePeriod, targetPeriod) {
-    if (!registeredAccounts.length) return [];
-    
-    return registeredAccounts.map(account => {
-        // Access the correct data structure - registeredAccounts contains data property
-        const accountData = account.data || account;
-        const baseCost = calculatePeriodCost(accountData, basePeriod.start, basePeriod.end);
-        const targetCost = calculatePeriodCost(accountData, targetPeriod.start, targetPeriod.end);
-        
-        const difference = targetCost - baseCost;
-        const percentage = baseCost > 0 ? ((difference / baseCost) * 100) : 0;
-        
-        return {
-            accountName: account.name || account.accountName,
-            baseCost,
-            targetCost,
-            difference,
-            percentage,
-            trend: getReductionEffectIcon(percentage)
-        };
-    });
-}
 
-/**
- * Calculate cost for a specific period
- */
-function calculatePeriodCost(account, startDate, endDate) {
-    let totalCost = 0;
-    
-    if (!account || !account.monthlyData) {
-        console.warn('Invalid account data:', account);
-        return 0;
-    }
-    
-    account.monthlyData.forEach(monthData => {
-        if (monthData.date >= startDate && monthData.date <= endDate) {
-            totalCost += monthData.totalCost;
-        }
-    });
-    
-    return totalCost;
-}
 
-/**
- * Display custom period comparison results
- */
-function displayCustomPeriodResults(reductionData, basePeriod, targetPeriod) {
-    if (!elements.reductionEffectTable) return;
-    
-    const baseLabel = formatPeriodLabel(basePeriod);
-    const targetLabel = formatPeriodLabel(targetPeriod);
-    
-    const tableHTML = `
-        <table>
-            <thead>
-                <tr>
-                    <th>アカウント</th>
-                    <th>ベース期間コスト<br>(${baseLabel})</th>
-                    <th>対象期間コスト<br>(${targetLabel})</th>
-                    <th>差額</th>
-                    <th>変化率</th>
-                    <th>効果</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${reductionData.map(data => `
-                    <tr>
-                        <td>${escapeHtml(data.accountName)}</td>
-                        <td>${formatCurrency(data.baseCost)}</td>
-                        <td>${formatCurrency(data.targetCost)}</td>
-                        <td>${data.difference >= 0 ? '+' : ''}${formatCurrency(data.difference, 0, true)}</td>
-                        <td>${data.percentage >= 0 ? '+' : ''}${data.percentage.toFixed(1)}%</td>
-                        <td>${data.trend}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-    
-    elements.reductionEffectTable.innerHTML = tableHTML;
-    
-    // Update chart if available
-    updateReductionEffectChart(reductionData);
-}
 
-/**
- * Format period label for display
- */
-function formatPeriodLabel(period) {
-    if (period.start === period.end) {
-        return formatDateForDisplay(period.start);
-    }
-    return `${formatDateForDisplay(period.start)} 〜 ${formatDateForDisplay(period.end)}`;
-}
 
-/**
- * Format date for display (YYYY-MM-DD to YYYY年MM月)
- */
-function formatDateForDisplay(dateString) {
-    const date = new Date(dateString);
-    return `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, '0')}月`;
-}
 
-/**
- * Update reduction effect chart
- */
-function updateReductionEffectChart(reductionData) {
-    if (!elements.reductionEffectChart || !reductionData.length) return;
-    
-    // Create or update chart
-    const canvas = elements.reductionEffectChart.querySelector('canvas');
-    if (canvas && typeof Chart !== 'undefined') {
-        const ctx = canvas.getContext('2d');
-        
-        // Destroy existing chart
-        if (chartInstances.reductionEffect) {
-            chartInstances.reductionEffect.destroy();
-        }
-        
-        const config = createReductionEffectChartConfig(reductionData);
-        chartInstances.reductionEffect = new Chart(ctx, config);
-    }
-}
 
 
 /**

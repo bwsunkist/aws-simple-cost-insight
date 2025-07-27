@@ -2207,35 +2207,34 @@ function displayMultiServiceAnalysisResults(analysisData, selectedServices) {
 
     const { monthlyBreakdown, serviceTotals, grandTotal } = analysisData;
 
-    // Create table headers
-    let tableHeaders = '<tr><th>月</th>';
-    selectedServices.forEach(service => {
-        tableHeaders += `<th>${escapeHtml(service)}</th>`;
-    });
-    tableHeaders += '<th>合計</th></tr>';
-
-    // Create table rows
-    const tableRows = monthlyBreakdown.map(monthData => {
+    // Create table headers (transposed: service as first column, then months)
+    let tableHeaders = '<tr><th>サービス</th>';
+    monthlyBreakdown.forEach(monthData => {
         const monthLabel = new Date(monthData.date).toLocaleDateString('ja-JP', { 
             year: 'numeric', 
             month: '2-digit' 
         });
+        tableHeaders += `<th>${monthLabel}</th>`;
+    });
+    tableHeaders += '<th>合計</th></tr>';
+
+    // Create table rows (transposed: each row is a service)
+    const tableRows = selectedServices.map(service => {
+        let row = `<tr><td><strong>${escapeHtml(service)}</strong></td>`;
         
-        let row = `<tr><td>${monthLabel}</td>`;
-        
-        selectedServices.forEach(service => {
+        monthlyBreakdown.forEach(monthData => {
             const cost = monthData[service] || 0;
             row += `<td>${formatCurrency(cost)}</td>`;
         });
         
-        row += `<td><strong>${formatCurrency(monthData.total)}</strong></td></tr>`;
+        row += `<td><strong>${formatCurrency(serviceTotals[service])}</strong></td></tr>`;
         return row;
     }).join('');
 
-    // Create summary row
+    // Create summary row (transposed: totals for each month)
     let summaryRow = '<tr class="total-row"><td><strong>合計</strong></td>';
-    selectedServices.forEach(service => {
-        summaryRow += `<td><strong>${formatCurrency(serviceTotals[service])}</strong></td>`;
+    monthlyBreakdown.forEach(monthData => {
+        summaryRow += `<td><strong>${formatCurrency(monthData.total)}</strong></td>`;
     });
     summaryRow += `<td><strong>${formatCurrency(grandTotal)}</strong></td></tr>`;
 

@@ -1823,3 +1823,257 @@ canvas {
         font-size: 0.85rem;
     }
 }
+
+/* コスト詳細テーブル */
+.table-controls {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.table-controls .control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table-controls label {
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.cost-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 0.9rem;
+}
+
+.cost-detail-table th,
+.cost-detail-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.cost-detail-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.cost-detail-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.cost-detail-table .service-name {
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+}
+
+.cost-detail-table .cost-cell {
+    text-align: right;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: #059669;
+}
+
+.cost-detail-table .total-row {
+    background: #f3f4f6;
+    font-weight: 600;
+}
+
+.cost-detail-table .total-row .cost-cell {
+    color: #1f2937;
+}
+
+.cost-detail-table .date-header {
+    text-align: center;
+    white-space: nowrap;
+    min-width: 90px;
+}
+
+/* 前月比行のスタイル */
+.cost-detail-table .diff-row {
+    background: #fef3f2;
+    font-size: 0.8rem;
+}
+
+.cost-detail-table .percent-row {
+    background: #f0f9ff;
+    font-size: 0.8rem;
+}
+
+.cost-detail-table .diff-row .service-name,
+.cost-detail-table .percent-row .service-name {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+    font-style: italic;
+    padding-left: 1.5rem;
+}
+
+.cost-detail-table .diff-cell,
+.cost-detail-table .percent-cell {
+    text-align: right;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.cost-detail-table .diff-cell.positive,
+.cost-detail-table .percent-cell.positive {
+    color: #dc2626;
+}
+
+.cost-detail-table .diff-cell.negative,
+.cost-detail-table .percent-cell.negative {
+    color: #16a34a;
+}
+
+.cost-detail-table .diff-cell.neutral,
+.cost-detail-table .percent-cell.neutral {
+    color: #6b7280;
+}
+
+/* 合計前月比行のスタイル */
+.cost-detail-table .total-diff-row,
+.cost-detail-table .total-percent-row {
+    background: #f8fafc;
+    font-weight: 600;
+    border-top: 2px solid #e5e7eb;
+}
+
+.cost-detail-table .total-diff-row .service-name,
+.cost-detail-table .total-percent-row .service-name {
+    font-size: 0.85rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+/* アコーディオン機能のスタイル */
+.accordion-controls {
+    margin: 1rem 0;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.accordion-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.accordion-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.accordion-btn.expand-btn:hover {
+    background: #fef3f2;
+    border-color: #f87171;
+    color: #dc2626;
+}
+
+.accordion-btn.collapse-btn:hover {
+    background: #f0f9ff;
+    border-color: #60a5fa;
+    color: #2563eb;
+}
+
+.clickable-service {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-service:hover {
+    background: #f9fafb;
+}
+
+.clickable-service.expanded {
+    background: #fef3f2;
+    font-weight: 600;
+}
+
+.accordion-icon {
+    display: inline-block;
+    margin-right: 0.5rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+    transition: transform 0.2s ease;
+    width: 12px;
+    text-align: center;
+}
+
+.clickable-service.expanded .accordion-icon {
+    color: #dc2626;
+    transform: rotate(0deg);
+}
+
+.service-detail-row {
+    transition: all 0.3s ease;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+    font-style: italic;
+    padding-left: 2rem;
+}
+
+.service-cost-row {
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.service-cost-row:hover {
+    background: #fafafa;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .table-controls {
+        padding: 0.75rem;
+    }
+    
+    .table-controls .control-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+    
+    .cost-detail-table {
+        font-size: 0.8rem;
+    }
+    
+    .cost-detail-table th,
+    .cost-detail-table td {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .cost-detail-table .date-header {
+        min-width: 80px;
+    }
+}

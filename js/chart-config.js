@@ -337,7 +337,7 @@ function destroyChart(chartInstance) {
  * @param {number} decimals - Number of decimal places
  * @returns {string} Formatted currency string
  */
-function formatCurrency(value, decimals = 0, allowNegative = false) {
+function formatCurrency(value, decimals = 0, allowNegative = false, showSign = false) {
     // Handle invalid values
     if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
         return '$0';
@@ -348,8 +348,46 @@ function formatCurrency(value, decimals = 0, allowNegative = false) {
     const absValue = Math.abs(safeValue);
     const formatted = '$' + Math.round(absValue).toLocaleString();
     
-    // Add negative sign if needed
-    return safeValue < 0 ? '-' + formatted : formatted;
+    // Add sign if needed
+    if (showSign) {
+        if (safeValue > 0) {
+            return '+' + formatted;
+        } else if (safeValue < 0) {
+            return '-' + formatted;
+        } else {
+            return formatted;
+        }
+    } else {
+        return safeValue < 0 ? '-' + formatted : formatted;
+    }
+}
+
+/**
+ * Format percentage value with sign
+ * @param {number} value - Percentage value
+ * @param {boolean} showSign - Whether to show + sign for positive values
+ * @returns {string} Formatted percentage
+ */
+function formatPercentage(value, showSign = false) {
+    // Handle invalid values
+    if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
+        return '0%';
+    }
+    
+    const rounded = Math.round(value * 10) / 10; // Round to 1 decimal place
+    const formatted = Math.abs(rounded).toFixed(1) + '%';
+    
+    if (showSign) {
+        if (rounded > 0) {
+            return '+' + formatted;
+        } else if (rounded < 0) {
+            return '-' + formatted;
+        } else {
+            return formatted;
+        }
+    } else {
+        return rounded < 0 ? '-' + formatted : formatted;
+    }
 }
 
 /**

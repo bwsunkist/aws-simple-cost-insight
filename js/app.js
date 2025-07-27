@@ -346,6 +346,9 @@ async function handleAnalyzeData() {
         console.log('Displaying analysis results...');
         displayAnalysisResults();
         
+        console.log('Displaying cost detail table...');
+        displayCostDetailTable();
+        
         showMessage('データ分析が完了しました', 'success');
         
     } catch (error) {
@@ -2285,5 +2288,455 @@ function updateMultiServiceAnalysisChart(analysisData, selectedServices) {
     }
 }
 
+/**
+ * Display cost detail table section
+ */
+function displayCostDetailTable() {
+    const section = document.getElementById('costDetailTableSection');
+    const accountSelect = document.getElementById('costTableAccountSelect');
+    
+    if (!section || !accountSelect || !aggregatedData) return;
+    
+    // Show section
+    section.style.display = 'block';
+    
+    // Populate account select options
+    populateCostTableAccountSelect();
+    
+    // Setup event listener for account selection
+    accountSelect.addEventListener('change', handleCostTableAccountChange);
+    
+    // Display initial table
+    updateCostDetailTable();
+}
+
+/**
+ * Populate account select options for cost detail table
+ */
+function populateCostTableAccountSelect() {
+    const select = document.getElementById('costTableAccountSelect');
+    if (!select) return;
+    
+    // Clear existing options except the first one
+    const firstOption = select.querySelector('option[value="all"]');
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+    
+    // Add individual account options
+    registeredAccounts.forEach(account => {
+        const option = document.createElement('option');
+        option.value = account.name;
+        option.textContent = account.name;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Handle account selection change for cost detail table
+ */
+function handleCostTableAccountChange() {
+    updateCostDetailTable();
+}
+
+/**
+ * Update cost detail table based on selected account
+ */
+function updateCostDetailTable() {
+    const accountSelect = document.getElementById('costTableAccountSelect');
+    const container = document.getElementById('costDetailTableContainer');
+    
+    if (!accountSelect || !container || !aggregatedData) return;
+    
+    const selectedAccount = accountSelect.value;
+    
+    if (selectedAccount === 'all') {
+        displayAllAccountsCostTable(container);
+    } else {
+        displaySingleAccountCostTable(container, selectedAccount);
+    }
+}
+
+/**
+ * Display cost table for all accounts combined
+ */
+function displayAllAccountsCostTable(container) {
+    if (!aggregatedData.monthlyTrends || aggregatedData.monthlyTrends.length === 0) {
+        container.innerHTML = '<p>データがありません</p>';
+        return;
+    }
+    
+    const allServices = aggregatedData.services || [];
+    const monthlyTrends = aggregatedData.monthlyTrends;
+    
+    // Create table headers
+    let tableHeaders = '<tr><th class="service-name">サービス</th>';
+    monthlyTrends.forEach(monthData => {
+        const monthLabel = new Date(monthData.date).toLocaleDateString('ja-JP', { 
+            year: 'numeric', 
+            month: '2-digit' 
+        });
+        tableHeaders += `<th class="date-header">${monthLabel}</th>`;
+    });
+    tableHeaders += '<th class="date-header">合計</th>';
+    tableHeaders += '<th class="date-header">前月比</th></tr>';
+    
+    // Create table rows for services with accordion functionality
+    const tableRows = allServices.map((service, serviceIndex) => {
+        const serviceId = `service-${serviceIndex}`;
+        let costRow = `<tr class="service-cost-row">
+            <td class="service-name clickable-service" onclick="toggleServiceDetails('${serviceId}')" data-service="${serviceId}">
+                <span class="accordion-icon">▶</span>
+                ${escapeHtml(service)}
+            </td>`;
+        let diffRow = `<tr class="diff-row service-detail-row" id="${serviceId}-diff" style="display: none;">
+            <td class="service-name detail-label">前月比差分</td>`;
+        let percentRow = `<tr class="percent-row service-detail-row" id="${serviceId}-percent" style="display: none;">
+            <td class="service-name detail-label">前月比(%)</td>`;
+        let serviceTotal = 0;
+        
+        monthlyTrends.forEach((monthData, index) => {
+            const cost = monthData.serviceBreakdown?.[service] || 0;
+            serviceTotal += cost;
+            costRow += `<td class="cost-cell">${formatCurrency(cost)}</td>`;
+            
+            // Calculate month-over-month change
+            if (index === 0) {
+                // First month - no previous data
+                diffRow += `<td class="diff-cell">-</td>`;
+                percentRow += `<td class="percent-cell">-</td>`;
+            } else {
+                const prevCost = monthlyTrends[index - 1].serviceBreakdown?.[service] || 0;
+                const diff = cost - prevCost;
+                const percentChange = prevCost !== 0 ? ((diff / prevCost) * 100) : (cost > 0 ? 100 : 0);
+                
+                const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+                const percentClass = percentChange > 0 ? 'positive' : percentChange < 0 ? 'negative' : 'neutral';
+                
+                diffRow += `<td class="diff-cell ${diffClass}">${formatCurrency(diff, 0, true, true)}</td>`;
+                percentRow += `<td class="percent-cell ${percentClass}">${formatPercentage(percentChange, true)}</td>`;
+            }
+        });
+        
+        // Calculate latest month vs previous month difference for this service
+        let latestMonthDiff = '-';
+        if (monthlyTrends.length >= 2) {
+            const latestCost = monthlyTrends[monthlyTrends.length - 1].serviceBreakdown?.[service] || 0;
+            const prevCost = monthlyTrends[monthlyTrends.length - 2].serviceBreakdown?.[service] || 0;
+            const diff = latestCost - prevCost;
+            const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+            latestMonthDiff = `<span class="${diffClass}">${formatCurrency(diff, 0, true, true)}</span>`;
+        }
+        
+        costRow += `<td class="cost-cell"><strong>${formatCurrency(serviceTotal)}</strong></td>`;
+        costRow += `<td class="diff-cell">${latestMonthDiff}</td></tr>`;
+        diffRow += `<td class="diff-cell">-</td>`;
+        diffRow += `<td class="diff-cell">-</td></tr>`;
+        percentRow += `<td class="percent-cell">-</td>`;
+        percentRow += `<td class="percent-cell">-</td></tr>`;
+        
+        return costRow + diffRow + percentRow;
+    }).join('');
+    
+    // Create total row with month-over-month changes
+    let totalRow = '<tr class="total-row"><td class="service-name"><strong>合計</strong></td>';
+    let totalDiffRow = '<tr class="total-diff-row"><td class="service-name"><strong>合計前月比差分</strong></td>';
+    let totalPercentRow = '<tr class="total-percent-row"><td class="service-name"><strong>合計前月比(%)</strong></td>';
+    let grandTotal = 0;
+    let monthTotals = [];
+    
+    monthlyTrends.forEach((monthData, index) => {
+        // Calculate month total from service breakdown
+        let monthTotal = 0;
+        if (monthData.serviceBreakdown) {
+            Object.values(monthData.serviceBreakdown).forEach(cost => {
+                monthTotal += cost || 0;
+            });
+        }
+        monthTotals.push(monthTotal);
+        grandTotal += monthTotal;
+        totalRow += `<td class="cost-cell"><strong>${formatCurrency(monthTotal)}</strong></td>`;
+        
+        // Calculate month-over-month change for totals
+        if (index === 0) {
+            totalDiffRow += `<td class="diff-cell">-</td>`;
+            totalPercentRow += `<td class="percent-cell">-</td>`;
+        } else {
+            const prevTotal = monthTotals[index - 1];
+            const diff = monthTotal - prevTotal;
+            const percentChange = prevTotal !== 0 ? ((diff / prevTotal) * 100) : (monthTotal > 0 ? 100 : 0);
+            
+            const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+            const percentClass = percentChange > 0 ? 'positive' : percentChange < 0 ? 'negative' : 'neutral';
+            
+            totalDiffRow += `<td class="diff-cell ${diffClass}"><strong>${formatCurrency(diff, 0, true, true)}</strong></td>`;
+            totalPercentRow += `<td class="percent-cell ${percentClass}"><strong>${formatPercentage(percentChange, true)}</strong></td>`;
+        }
+    });
+    
+    // Calculate latest month vs previous month difference for totals
+    let totalLatestMonthDiff = '-';
+    if (monthTotals.length >= 2) {
+        const latestTotal = monthTotals[monthTotals.length - 1];
+        const prevTotal = monthTotals[monthTotals.length - 2];
+        const diff = latestTotal - prevTotal;
+        const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+        totalLatestMonthDiff = `<span class="${diffClass}"><strong>${formatCurrency(diff, 0, true, true)}</strong></span>`;
+    }
+    
+    totalRow += `<td class="cost-cell"><strong>${formatCurrency(grandTotal)}</strong></td>`;
+    totalRow += `<td class="diff-cell">${totalLatestMonthDiff}</td></tr>`;
+    totalDiffRow += `<td class="diff-cell">-</td>`;
+    totalDiffRow += `<td class="diff-cell">-</td></tr>`;
+    totalPercentRow += `<td class="percent-cell">-</td>`;
+    totalPercentRow += `<td class="percent-cell">-</td></tr>`;
+    
+    const tableHTML = `
+        <h4>全アカウント合計 - サービス別月次コスト詳細</h4>
+        <p class="table-description">全アカウントのサービス別コストを月次で表示しています。サービス名をクリックすると前月比詳細が表示されます。</p>
+        <div class="accordion-controls">
+            <button onclick="expandAllServiceDetails()" class="accordion-btn expand-btn">全て展開</button>
+            <button onclick="collapseAllServiceDetails()" class="accordion-btn collapse-btn">全て折りたたみ</button>
+        </div>
+        <table class="cost-detail-table">
+            <thead>${tableHeaders}</thead>
+            <tbody>
+                ${tableRows}
+                ${totalRow}
+                ${totalDiffRow}
+                ${totalPercentRow}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = tableHTML;
+}
+
+/**
+ * Display cost table for a specific account
+ */
+function displaySingleAccountCostTable(container, accountName) {
+    const account = registeredAccounts.find(acc => acc.name === accountName);
+    if (!account || !account.data.monthlyData) {
+        container.innerHTML = '<p>データがありません</p>';
+        return;
+    }
+    
+    const monthlyData = account.data.monthlyData;
+    const allServices = account.data.services || [];
+    
+    // Create table headers
+    let tableHeaders = '<tr><th class="service-name">サービス</th>';
+    monthlyData.forEach(monthData => {
+        const monthLabel = new Date(monthData.date).toLocaleDateString('ja-JP', { 
+            year: 'numeric', 
+            month: '2-digit' 
+        });
+        tableHeaders += `<th class="date-header">${monthLabel}</th>`;
+    });
+    tableHeaders += '<th class="date-header">合計</th>';
+    tableHeaders += '<th class="date-header">前月比</th></tr>';
+    
+    // Create table rows for services with accordion functionality
+    const tableRows = allServices.map((service, serviceIndex) => {
+        const serviceId = `single-service-${serviceIndex}`;
+        let costRow = `<tr class="service-cost-row">
+            <td class="service-name clickable-service" onclick="toggleServiceDetails('${serviceId}')" data-service="${serviceId}">
+                <span class="accordion-icon">▶</span>
+                ${escapeHtml(service)}
+            </td>`;
+        let diffRow = `<tr class="diff-row service-detail-row" id="${serviceId}-diff" style="display: none;">
+            <td class="service-name detail-label">前月比差分</td>`;
+        let percentRow = `<tr class="percent-row service-detail-row" id="${serviceId}-percent" style="display: none;">
+            <td class="service-name detail-label">前月比(%)</td>`;
+        let serviceTotal = 0;
+        
+        monthlyData.forEach((monthData, index) => {
+            const cost = monthData[service] || 0;
+            serviceTotal += cost;
+            costRow += `<td class="cost-cell">${formatCurrency(cost)}</td>`;
+            
+            // Calculate month-over-month change
+            if (index === 0) {
+                // First month - no previous data
+                diffRow += `<td class="diff-cell">-</td>`;
+                percentRow += `<td class="percent-cell">-</td>`;
+            } else {
+                const prevCost = monthlyData[index - 1][service] || 0;
+                const diff = cost - prevCost;
+                const percentChange = prevCost !== 0 ? ((diff / prevCost) * 100) : (cost > 0 ? 100 : 0);
+                
+                const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+                const percentClass = percentChange > 0 ? 'positive' : percentChange < 0 ? 'negative' : 'neutral';
+                
+                diffRow += `<td class="diff-cell ${diffClass}">${formatCurrency(diff, 0, true, true)}</td>`;
+                percentRow += `<td class="percent-cell ${percentClass}">${formatPercentage(percentChange, true)}</td>`;
+            }
+        });
+        
+        // Calculate latest month vs previous month difference for this service
+        let latestMonthDiff = '-';
+        if (monthlyData.length >= 2) {
+            const latestCost = monthlyData[monthlyData.length - 1][service] || 0;
+            const prevCost = monthlyData[monthlyData.length - 2][service] || 0;
+            const diff = latestCost - prevCost;
+            const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+            latestMonthDiff = `<span class="${diffClass}">${formatCurrency(diff, 0, true, true)}</span>`;
+        }
+        
+        costRow += `<td class="cost-cell"><strong>${formatCurrency(serviceTotal)}</strong></td>`;
+        costRow += `<td class="diff-cell">${latestMonthDiff}</td></tr>`;
+        diffRow += `<td class="diff-cell">-</td>`;
+        diffRow += `<td class="diff-cell">-</td></tr>`;
+        percentRow += `<td class="percent-cell">-</td>`;
+        percentRow += `<td class="percent-cell">-</td></tr>`;
+        
+        return costRow + diffRow + percentRow;
+    }).join('');
+    
+    // Create total row with month-over-month changes
+    let totalRow = '<tr class="total-row"><td class="service-name"><strong>合計</strong></td>';
+    let totalDiffRow = '<tr class="total-diff-row"><td class="service-name"><strong>合計前月比差分</strong></td>';
+    let totalPercentRow = '<tr class="total-percent-row"><td class="service-name"><strong>合計前月比(%)</strong></td>';
+    let grandTotal = 0;
+    let monthTotals = [];
+    
+    monthlyData.forEach((monthData, index) => {
+        // Calculate month total from all service costs (excluding date and totalCost)
+        let monthTotal = 0;
+        Object.keys(monthData).forEach(key => {
+            if (key !== 'date' && key !== 'totalCost' && allServices.includes(key)) {
+                monthTotal += monthData[key] || 0;
+            }
+        });
+        monthTotals.push(monthTotal);
+        grandTotal += monthTotal;
+        totalRow += `<td class="cost-cell"><strong>${formatCurrency(monthTotal)}</strong></td>`;
+        
+        // Calculate month-over-month change for totals
+        if (index === 0) {
+            totalDiffRow += `<td class="diff-cell">-</td>`;
+            totalPercentRow += `<td class="percent-cell">-</td>`;
+        } else {
+            const prevTotal = monthTotals[index - 1];
+            const diff = monthTotal - prevTotal;
+            const percentChange = prevTotal !== 0 ? ((diff / prevTotal) * 100) : (monthTotal > 0 ? 100 : 0);
+            
+            const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+            const percentClass = percentChange > 0 ? 'positive' : percentChange < 0 ? 'negative' : 'neutral';
+            
+            totalDiffRow += `<td class="diff-cell ${diffClass}"><strong>${formatCurrency(diff, 0, true, true)}</strong></td>`;
+            totalPercentRow += `<td class="percent-cell ${percentClass}"><strong>${formatPercentage(percentChange, true)}</strong></td>`;
+        }
+    });
+    
+    // Calculate latest month vs previous month difference for totals
+    let totalLatestMonthDiff = '-';
+    if (monthTotals.length >= 2) {
+        const latestTotal = monthTotals[monthTotals.length - 1];
+        const prevTotal = monthTotals[monthTotals.length - 2];
+        const diff = latestTotal - prevTotal;
+        const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+        totalLatestMonthDiff = `<span class="${diffClass}"><strong>${formatCurrency(diff, 0, true, true)}</strong></span>`;
+    }
+    
+    totalRow += `<td class="cost-cell"><strong>${formatCurrency(grandTotal)}</strong></td>`;
+    totalRow += `<td class="diff-cell">${totalLatestMonthDiff}</td></tr>`;
+    totalDiffRow += `<td class="diff-cell">-</td>`;
+    totalDiffRow += `<td class="diff-cell">-</td></tr>`;
+    totalPercentRow += `<td class="percent-cell">-</td>`;
+    totalPercentRow += `<td class="percent-cell">-</td></tr>`;
+    
+    const tableHTML = `
+        <h4>${escapeHtml(accountName)} アカウント - サービス別月次コスト詳細</h4>
+        <p class="table-description">${escapeHtml(accountName)}アカウントのサービス別コストを月次で表示しています。サービス名をクリックすると前月比詳細が表示されます。</p>
+        <div class="accordion-controls">
+            <button onclick="expandAllServiceDetails()" class="accordion-btn expand-btn">全て展開</button>
+            <button onclick="collapseAllServiceDetails()" class="accordion-btn collapse-btn">全て折りたたみ</button>
+        </div>
+        <table class="cost-detail-table">
+            <thead>${tableHeaders}</thead>
+            <tbody>
+                ${tableRows}
+                ${totalRow}
+                ${totalDiffRow}
+                ${totalPercentRow}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = tableHTML;
+}
+
+/**
+ * Toggle service detail rows (accordion functionality)
+ */
+function toggleServiceDetails(serviceId) {
+    const diffRow = document.getElementById(`${serviceId}-diff`);
+    const percentRow = document.getElementById(`${serviceId}-percent`);
+    const serviceElement = document.querySelector(`[data-service="${serviceId}"]`);
+    const icon = serviceElement ? serviceElement.querySelector('.accordion-icon') : null;
+    
+    if (diffRow && percentRow) {
+        const isCurrentlyVisible = diffRow.style.display !== 'none';
+        
+        if (isCurrentlyVisible) {
+            // Hide details
+            diffRow.style.display = 'none';
+            percentRow.style.display = 'none';
+            if (icon) icon.textContent = '▶';
+            if (serviceElement) serviceElement.classList.remove('expanded');
+        } else {
+            // Show details
+            diffRow.style.display = 'table-row';
+            percentRow.style.display = 'table-row';
+            if (icon) icon.textContent = '▼';
+            if (serviceElement) serviceElement.classList.add('expanded');
+        }
+    }
+}
+
+/**
+ * Expand all service details
+ */
+function expandAllServiceDetails() {
+    const serviceElements = document.querySelectorAll('.clickable-service');
+    serviceElements.forEach(element => {
+        const serviceId = element.getAttribute('data-service');
+        const diffRow = document.getElementById(`${serviceId}-diff`);
+        const percentRow = document.getElementById(`${serviceId}-percent`);
+        const icon = element.querySelector('.accordion-icon');
+        
+        if (diffRow && percentRow && diffRow.style.display === 'none') {
+            diffRow.style.display = 'table-row';
+            percentRow.style.display = 'table-row';
+            if (icon) icon.textContent = '▼';
+            element.classList.add('expanded');
+        }
+    });
+}
+
+/**
+ * Collapse all service details
+ */
+function collapseAllServiceDetails() {
+    const serviceElements = document.querySelectorAll('.clickable-service');
+    serviceElements.forEach(element => {
+        const serviceId = element.getAttribute('data-service');
+        const diffRow = document.getElementById(`${serviceId}-diff`);
+        const percentRow = document.getElementById(`${serviceId}-percent`);
+        const icon = element.querySelector('.accordion-icon');
+        
+        if (diffRow && percentRow && diffRow.style.display !== 'none') {
+            diffRow.style.display = 'none';
+            percentRow.style.display = 'none';
+            if (icon) icon.textContent = '▶';
+            element.classList.remove('expanded');
+        }
+    });
+}
+
 // Make functions available globally for inline event handlers
 window.removeAccount = removeAccount;
+window.toggleServiceDetails = toggleServiceDetails;
+window.expandAllServiceDetails = expandAllServiceDetails;
+window.collapseAllServiceDetails = collapseAllServiceDetails;

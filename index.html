@@ -385,6 +385,28 @@
                     </div>
                 </div>
             </section>
+
+            <!-- コスト詳細テーブル -->
+            <section id="costDetailTableSection" class="analysis-section" style="display: none;">
+                <div class="section-container">
+                    <h3>コスト詳細テーブル</h3>
+                    <p class="section-description">アカウント別・サービス別の月次コスト詳細を表形式で確認できます。</p>
+                    
+                    <div class="table-controls">
+                        <div class="control-group">
+                            <label for="costTableAccountSelect">対象アカウント:</label>
+                            <select id="costTableAccountSelect" class="styled-select">
+                                <option value="all">全アカウント合計</option>
+                                <!-- 動的に生成 -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="costDetailTableContainer" class="table-container">
+                        <!-- 動的に生成 -->
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
 
